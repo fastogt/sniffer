@@ -14,29 +14,67 @@
 
 #include "database/connection.h"
 
+#include <common/string_util.h>
+
 namespace database {
+
+namespace {
+common::Error make_cassandra_error(CassFuture* future) {
+  const char* message;
+  size_t message_length;
+  cass_future_error_message(future, &message, &message_length);
+  return common::make_error(std::string(message, message_length));
+}
+}
 
 Connection::Connection() : cluster_(NULL), connect_future_(NULL), session_(NULL) {}
 
 Connection::~Connection() {}
 
-void Connection::Connect(const std::vector<std::string>& hosts) {
+common::Error Connection::Connect(const std::vector<std::string>& hosts) {
+  if (hosts.empty()) {
+    return common::make_error_inval();
+  }
+
+  if (IsConnected()) {
+    return common::Error();
+  }
+
+  std::string hosts_str = common::JoinString(hosts, ",");
+
   // Initialize the cpp-driver
-  cluster_ = cass_cluster_new();
-  cass_cluster_set_contact_points(cluster_, hosts);
-  cass_cluster_set_connect_timeout(cluster_, 10000);
-  cass_cluster_set_request_timeout(cluster_, 10000);
-  cass_cluster_set_num_threads_io(cluster_, 1);
-  cass_cluster_set_core_connections_per_host(cluster_, 2);
-  cass_cluster_set_max_connections_per_host(cluster_, 4);
+  CassCluster* cluster = cass_cluster_new();
+  cass_cluster_set_contact_points(cluster, hosts_str.c_str());
+  cass_cluster_set_connect_timeout(cluster, 10000);
+  cass_cluster_set_request_timeout(cluster, 10000);
+  cass_cluster_set_num_threads_io(cluster, 1);
+  cass_cluster_set_core_connections_per_host(cluster, 2);
+  cass_cluster_set_max_connections_per_host(cluster, 4);
 
   // Establish the connection (if ssl)
-  session_ = cass_session_new();
-  connect_future_ = cass_session_connect(session_, cluster_);
+  CassSession* session = cass_session_new();
+  CassFuture* connect_future = cass_session_connect(session, cluster);
+
+  if (cass_future_error_code(connect_future) != CASS_OK) {
+    common::Error ferr = make_cassandra_error(connect_future);
+    cass_session_free(session);
+    cass_cluster_free(cluster);
+    cass_future_free(connect_future);
+    return ferr;
+  }
+
+  cluster_ = cluster;
+  session_ = session;
+  connect_future_ = connect_future;
+  return common::Error();
 }
 
-void Connection::Disconnect() {
+common::Error Connection::Disconnect() {
   if (session_) {
+    CassFuture* close_future = cass_session_close(session_);
+    cass_future_wait(close_future);
+    cass_future_free(close_future);
+
     cass_session_free(session_);
     session_ = NULL;
   }
@@ -50,6 +88,7 @@ void Connection::Disconnect() {
     cass_future_free(connect_future_);
     connect_future_ = NULL;
   }
+  return common::Error();
 }
 
 bool Connection::IsConnected() const {
@@ -58,5 +97,32 @@ bool Connection::IsConnected() const {
   }
 
   return cass_future_error_code(connect_future_) == CASS_OK;
+}
+
+common::Error Connection::Execute(const std::string& query, size_t parameter_count, exec_func_t succsess_cb) {
+  if (query.empty()) {
+    return common::make_error_inval();
+  }
+
+  if (!IsConnected()) {
+    return common::make_error_inval();
+  }
+
+  CassStatement* statement = cass_statement_new(query.c_str(), parameter_count);
+  CassFuture* result_future = cass_session_execute(session_, statement);
+  if (cass_future_error_code(result_future) != CASS_OK) {
+    common::Error ferr = make_cassandra_error(result_future);
+    cass_statement_free(statement);
+    cass_future_free(result_future);
+    return ferr;
+  }
+
+  if (succsess_cb) {
+    succsess_cb(result_future);
+  }
+
+  cass_statement_free(statement);
+  cass_future_free(result_future);
+  return common::Error();
 }
 }

@@ -163,7 +163,7 @@ class BuildRequest(object):
         # abs_dir_path = self.build_dir_path_
 
         self.build_snappy(cmake_line, make_install)
-        self.build_openssl(prefix_path)
+#        self.build_openssl(prefix_path)
         self.build_jsonc(prefix_path)
         self.build_libev(prefix_path)
         self.build_common(cmake_line, make_install)

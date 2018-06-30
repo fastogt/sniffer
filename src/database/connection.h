@@ -14,18 +14,23 @@
 
 #include <cassandra.h>
 
-#include <string>
 #include <vector>
+#include <functional>
+
+#include <common/error.h>
 
 namespace database {
 
 class Connection {
  public:
+  typedef std::function<void(CassFuture* result)> exec_func_t;
   Connection();
   ~Connection();
 
-  void Connect(const std::vector<std::string>& hosts);
-  void Disconnect();
+  common::Error Connect(const std::vector<std::string>& hosts) WARN_UNUSED_RESULT;
+  common::Error Disconnect() WARN_UNUSED_RESULT;
+
+  common::Error Execute(const std::string& query, size_t parameter_count, exec_func_t succsess_cb) WARN_UNUSED_RESULT;
 
   bool IsConnected() const;
 
