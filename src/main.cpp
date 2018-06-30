@@ -15,9 +15,54 @@
 #include <stdio.h>
 #include <cassandra.h>
 
+class Connection {
+ public:
+  Connection() : cluster_(NULL), connect_future_(NULL), session_(NULL) {}
+  ~Connection() { cleanup(); }
+
+  void setup(const char* hosts) {
+    // Initialize the cpp-driver
+    cluster_ = cass_cluster_new();
+    cass_cluster_set_contact_points(cluster_, hosts);
+    cass_cluster_set_connect_timeout(cluster_, 10000);
+    cass_cluster_set_request_timeout(cluster_, 10000);
+    cass_cluster_set_num_threads_io(cluster_, 1);
+    cass_cluster_set_core_connections_per_host(cluster_, 2);
+    cass_cluster_set_max_connections_per_host(cluster_, 4);
+
+    // Establish the connection (if ssl)
+    session_ = cass_session_new();
+    connect_future_ = cass_session_connect(session_, cluster_);
+  }
+
+  /**
+   * Cleanup the driver connection
+   */
+  void cleanup() {
+    if (session_) {
+      cass_session_free(session_);
+      session_ = NULL;
+    }
+
+    if (cluster_) {
+      cass_cluster_free(cluster_);
+      cluster_ = NULL;
+    }
+
+    if (connect_future_) {
+      cass_future_free(connect_future_);
+      connect_future_ = NULL;
+    }
+  }
+
+ private:
+  CassCluster* cluster_;
+  CassFuture* connect_future_;
+  CassSession* session_;
+};
+
 int main(int argc, char* argv[]) {
   /* Setup and connect to cluster */
-  CassFuture* connect_future = NULL;
   CassCluster* cluster = cass_cluster_new();
   CassSession* session = cass_session_new();
   const char* hosts = "127.0.0.1";
@@ -29,7 +74,7 @@ int main(int argc, char* argv[]) {
   cass_cluster_set_contact_points(cluster, hosts);
 
   /* Provide the cluster object as configuration to connect the session */
-  connect_future = cass_session_connect(session, cluster);
+  CassFuture* connect_future = cass_session_connect(session, cluster);
 
   if (cass_future_error_code(connect_future) == CASS_OK) {
     CassFuture* close_future = NULL;
