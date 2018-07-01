@@ -27,6 +27,10 @@ common::Error make_cassandra_error(CassFuture* future) {
 }
 }
 
+bool ExecuteInfo::IsValid() const {
+  return !query.empty();
+}
+
 Connection::Connection() : cluster_(NULL), connect_future_(NULL), session_(NULL) {}
 
 Connection::~Connection() {}
@@ -99,7 +103,14 @@ bool Connection::IsConnected() const {
   return cass_future_error_code(connect_future_) == CASS_OK;
 }
 
-common::Error Connection::Execute(const std::string& query, size_t parameter_count, exec_func_t succsess_cb) {
+common::Error Connection::Execute(const ExecuteInfo& query) {
+  return Execute(query.query, query.parameter_count, query.prep_stat, query.succsess_cb);
+}
+
+common::Error Connection::Execute(const std::string& query,
+                                  size_t parameter_count,
+                                  statemet_prepare_func_t prep_stat,
+                                  exec_func_t succsess_cb) {
   if (query.empty()) {
     return common::make_error_inval();
   }
@@ -109,7 +120,11 @@ common::Error Connection::Execute(const std::string& query, size_t parameter_cou
   }
 
   CassStatement* statement = cass_statement_new(query.c_str(), parameter_count);
+  if (prep_stat) {
+    prep_stat(statement);
+  }
   CassFuture* result_future = cass_session_execute(session_, statement);
+  cass_future_wait(result_future);
   if (cass_future_error_code(result_future) != CASS_OK) {
     common::Error ferr = make_cassandra_error(result_future);
     cass_statement_free(statement);

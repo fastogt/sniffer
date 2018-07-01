@@ -21,16 +21,30 @@
 
 namespace database {
 
+typedef std::function<void(CassStatement* result)> statemet_prepare_func_t;
+typedef std::function<void(CassFuture* result)> exec_func_t;
+
+struct ExecuteInfo {
+  bool IsValid() const;
+  std::string query;
+  size_t parameter_count;
+  statemet_prepare_func_t prep_stat;
+  exec_func_t succsess_cb;
+};
+
 class Connection {
  public:
-  typedef std::function<void(CassFuture* result)> exec_func_t;
   Connection();
   ~Connection();
 
   common::Error Connect(const std::vector<std::string>& hosts) WARN_UNUSED_RESULT;
   common::Error Disconnect() WARN_UNUSED_RESULT;
 
-  common::Error Execute(const std::string& query, size_t parameter_count, exec_func_t succsess_cb) WARN_UNUSED_RESULT;
+  common::Error Execute(const ExecuteInfo& query) WARN_UNUSED_RESULT;
+  common::Error Execute(const std::string& query,
+                        size_t parameter_count,
+                        statemet_prepare_func_t prep_stat = statemet_prepare_func_t(),
+                        exec_func_t succsess_cb = exec_func_t()) WARN_UNUSED_RESULT;
 
   bool IsConnected() const;
 
