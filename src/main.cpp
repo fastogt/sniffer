@@ -15,99 +15,118 @@
 // https://stackoverflow.com/questions/39456131/improve-insertion-time-in-cassandra-database-with-datastax-cpp-driver
 
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
-#include "database/connection.h"
+#include <iostream>
 
-#define CREATE_KEYSPACE_QUERY                                                                                         \
-  "CREATE KEYSPACE IF NOT EXISTS examples WITH replication = { 'class': 'SimpleStrategy', 'replication_factor': '3' " \
-  "};"
+#include <common/file_system/file.h>
+#include <common/file_system/file_system.h>
+#include <common/file_system/string_path_utils.h>
+#include <common/utils.h>
 
-#define USE_KEYSPACE_QUERY "USE examples;"
+#include "process_wrapper.h"
 
-#define CREATE_TABLE_QUERY                                                                                    \
-  "CREATE TABLE IF NOT EXISTS test (mac_address text, date timestamp, primary key (mac_address, date)) with " \
-  "compaction = {'class' : 'DateTieredCompactionStrategy'};"
+#define HELP_TEXT                          \
+  "Usage: " SERVICE_NAME                   \
+  " [options]\n"                           \
+  "  Manipulate " SERVICE_NAME             \
+  ".\n\n"                                  \
+  "    --version  display version\n"       \
+  "    --daemon   run as a daemon\n"       \
+  "    --stop     stop running instance\n" \
+  "    --reload   force running instance to reread configuration file\n"
 
-#define SELECT_ALL_QUERY "SELECT mac_address, date FROM test"
-
-#define INSERT_QUERY "INSERT INTO test (mac_address, date) VALUES (?, ?)"
-
-int main(int argc, char* argv[]) {
-  const char* hosts = "127.0.0.1";
-  if (argc > 1) {
-    hosts = argv[1];
+int main(int argc, char** argv, char** envp) {
+  bool run_as_daemon = false;
+  for (int i = 1; i < argc; ++i) {
+    if (strcmp(argv[i], "--version") == 0) {
+      std::cout << PROJECT_VERSION_HUMAN << std::endl;
+      return EXIT_SUCCESS;
+    } else if (strcmp(argv[i], "--daemon") == 0) {
+      run_as_daemon = true;
+    } else if (strcmp(argv[i], "--stop") == 0) {
+      return sniffer::ProcessWrapper::SendStopDaemonRequest();
+    } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
+      std::cout << HELP_TEXT << std::endl;
+      return EXIT_SUCCESS;
+    } else {
+      std::cout << HELP_TEXT << std::endl;
+      return EXIT_FAILURE;
+    }
   }
 
-  database::Connection con;
-  common::Error err = con.Connect({hosts});
-  if (err) {
-    DEBUG_MSG_ERROR(err, common::logging::LOG_LEVEL_ERR);
+  if (run_as_daemon) {
+    if (!common::create_as_daemon()) {
+      return EXIT_FAILURE;
+    }
+  }
+
+  pid_t daemon_pid = getpid();
+  std::string folder_path_to_pid = common::file_system::get_dir_path(PIDFILE_PATH);
+  if (folder_path_to_pid.empty()) {
+    ERROR_LOG() << "Can't get pid file path: " << PIDFILE_PATH;
     return EXIT_FAILURE;
   }
 
-  err = con.Execute(CREATE_KEYSPACE_QUERY, 0);
+  if (!common::file_system::is_directory_exist(folder_path_to_pid)) {
+    if (!common::file_system::create_directory(folder_path_to_pid, true)) {
+      ERROR_LOG() << "Pid file directory not exists, pid file path: " << PIDFILE_PATH;
+      return EXIT_FAILURE;
+    }
+  }
+
+  common::ErrnoError err = common::file_system::node_access(folder_path_to_pid);
   if (err) {
-    DEBUG_MSG_ERROR(err, common::logging::LOG_LEVEL_ERR);
-    con.Disconnect();
+    ERROR_LOG() << "Can't have permissions to create, pid file path: " << PIDFILE_PATH;
     return EXIT_FAILURE;
   }
 
-  err = con.Execute(USE_KEYSPACE_QUERY, 0);
+  common::file_system::File pidfile;
+  err = pidfile.Open(PIDFILE_PATH, common::file_system::File::FLAG_CREATE | common::file_system::File::FLAG_WRITE);
   if (err) {
-    DEBUG_MSG_ERROR(err, common::logging::LOG_LEVEL_ERR);
-    con.Disconnect();
+    ERROR_LOG() << "Can't open pid file path: " << PIDFILE_PATH;
     return EXIT_FAILURE;
   }
 
-  err = con.Execute(CREATE_TABLE_QUERY, 0);
+  err = pidfile.Lock();
   if (err) {
-    DEBUG_MSG_ERROR(err, common::logging::LOG_LEVEL_ERR);
-    con.Disconnect();
+    ERROR_LOG() << "Can't lock pid file path: " << PIDFILE_PATH << "; message: " << err->GetDescription();
+    return EXIT_FAILURE;
+  }
+  std::string pid_str = common::MemSPrintf("%ld\n", static_cast<long>(daemon_pid));
+  size_t writed;
+  err = pidfile.Write(pid_str, &writed);
+  if (err) {
+    ERROR_LOG() << "Failed to write pid file path: " << PIDFILE_PATH << "; message: " << err->GetDescription();
     return EXIT_FAILURE;
   }
 
-  auto prep_stat_cb = [](CassStatement* statement) {
-    time_t now = time(NULL);
-    cass_statement_bind_string(statement, 0, "test");
-    cass_statement_bind_int64(statement, 1, now * 1000);
-  };
-  err = con.Execute(INSERT_QUERY, 2, prep_stat_cb);
+  // start
+  sniffer::ProcessWrapper wrapper;
+  std::string log_path = "/tmp/t";
+  common::logging::INIT_LOGGER(SERVICE_NAME, log_path, common::logging::LOG_LEVEL_INFO);  // initialization
+                                                                                                   // of logging
+                                                                                                   // system
+  NOTICE_LOG() << "Running " PROJECT_VERSION_HUMAN << " in " << (run_as_daemon ? "daemon" : "common") << " mode";
+
+  for (char** env = envp; *env != NULL; env++) {
+    char* cur_env = *env;
+    INFO_LOG() << cur_env;
+  }
+
+  int res = wrapper.Exec(argc, argv);
+  NOTICE_LOG() << "Quiting " PROJECT_VERSION_HUMAN;
+
+  err = pidfile.Unlock();
   if (err) {
-    DEBUG_MSG_ERROR(err, common::logging::LOG_LEVEL_ERR);
-    con.Disconnect();
+    ERROR_LOG() << "Failed to unlock pidfile: " << PIDFILE_PATH << "; message: " << err->GetDescription();
     return EXIT_FAILURE;
   }
 
-  auto select_cb = [](CassFuture* result_future) { /* Retrieve result set and get the first row */
-                                                   const CassResult* result = cass_future_get_result(result_future);
-                                                   CassIterator* iterator = cass_iterator_from_result(result);
-                                                   while (cass_iterator_next(iterator)) {
-                                                     const CassRow* row = cass_iterator_get_row(iterator);
-                                                     const char* mac_address;
-                                                     size_t mac_address_size;
-                                                     cass_value_get_string(cass_row_get_column(row, 0), &mac_address,
-                                                                           &mac_address_size);
-
-                                                     time_t ts;
-                                                     cass_value_get_int64(cass_row_get_column(row, 1), &ts);
-
-                                                     printf("%s, %llu\n", mac_address, ts);
-                                                   }
-                                                   cass_iterator_free(iterator);
-                                                   cass_result_free(result);
-  };
-
-  database::ExecuteInfo select_data_query;
-  select_data_query.query = SELECT_ALL_QUERY;
-  select_data_query.parameter_count = 0;
-  select_data_query.succsess_cb = select_cb;
-  err = con.Execute(select_data_query);
+  err = common::file_system::remove_file(PIDFILE_PATH);
   if (err) {
-    DEBUG_MSG_ERROR(err, common::logging::LOG_LEVEL_ERR);
-    con.Disconnect();
-    return EXIT_FAILURE;
+    WARNING_LOG() << "Can't remove file: " << PIDFILE_PATH << ", error: " << err->GetDescription();
   }
-
-  con.Disconnect();
-  return EXIT_SUCCESS;
+  return res;
 }

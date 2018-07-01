@@ -12,6 +12,8 @@
     along with sniffer.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#pragma once
+
 #include <cassandra.h>
 
 #include <vector>
@@ -19,6 +21,7 @@
 
 #include <common/error.h>
 
+namespace sniffer {
 namespace database {
 
 typedef std::function<void(CassStatement* result)> statemet_prepare_func_t;
@@ -53,4 +56,5 @@ class Connection {
   CassFuture* connect_future_;
   CassSession* session_;
 };
+}
 }

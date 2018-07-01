@@ -16,6 +16,7 @@
 
 #include <common/string_util.h>
 
+namespace sniffer {
 namespace database {
 
 namespace {
@@ -139,5 +140,6 @@ common::Error Connection::Execute(const std::string& query,
   cass_statement_free(statement);
   cass_future_free(result_future);
   return common::Error();
+}
 }
 }
