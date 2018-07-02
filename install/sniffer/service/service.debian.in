@@ -1,20 +1,20 @@
 #! /bin/sh
 ### BEGIN INIT INFO
-# Provides:          daemon_slave
+# Provides:          daemon
 # Required-Start:    $remote_fs $syslog
 # Required-Stop:     $remote_fs $syslog
 # Default-Start:     2 3 4 5
 # Default-Stop:	     0 1 6
 ### END INIT INFO
 
-NAME=@STREAMER_SERVICE_NAME_EXE@
+NAME=@SERVICE_NAME_EXE@
 DAEMON=@EXECUTABLE_PATH@
 DAEMON_ARGS="--daemon"
 STOP_ARGS="--stop"
 RELOAD_ARGS="--reload"
 RUNDIR=@RUN_DIR_PATH@
 PIDFILE=@PIDFILE_PATH@
-SCRIPTNAME=/etc/init.d/@STREAMER_SERVICE_NAME@
+SCRIPTNAME=/etc/init.d/@SERVICE_NAME@
 USER=@USER_NAME@
 GROUP=@USER_GROUP@
 

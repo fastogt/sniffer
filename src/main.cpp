@@ -102,12 +102,20 @@ int main(int argc, char** argv, char** envp) {
     return EXIT_FAILURE;
   }
 
-  // start
+// start
+#if defined(NDEBUG)
+  common::logging::LOG_LEVEL level = common::logging::LOG_LEVEL_INFO;
+#else
+  common::logging::LOG_LEVEL level = common::logging::LOG_LEVEL_DEBUG;
+#endif
+#if defined(LOG_TO_FILE)
+  std::string log_path = common::file_system::prepare_path("/var/log/" PROJECT_NAME_LOWERCASE ".log");
+  INIT_LOGGER(PROJECT_NAME_TITLE, log_path, level);
+#else
+  INIT_LOGGER(PROJECT_NAME_TITLE, level);
+#endif
+
   sniffer::ProcessWrapper wrapper;
-  std::string log_path = "/tmp/t";
-  common::logging::INIT_LOGGER(SERVICE_NAME, log_path, common::logging::LOG_LEVEL_INFO);  // initialization
-                                                                                                   // of logging
-                                                                                                   // system
   NOTICE_LOG() << "Running " PROJECT_VERSION_HUMAN << " in " << (run_as_daemon ? "daemon" : "common") << " mode";
 
   for (char** env = envp; *env != NULL; env++) {
