@@ -12,31 +12,19 @@
     along with sniffer.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#pragma once
+#include "daemon_server.h"
 
-#include <string>  // for string
-
-#include <common/error.h>      // for Error
-#include <common/macros.h>     // for WARN_UNUSED_RESULT
-#include <common/net/types.h>  // for HostAndPort
-#include <common/file_system/path.h>
+#include "daemon_client.h"
 
 namespace sniffer {
 
-struct ServerSettings {
-  ServerSettings();
+DaemonServer::DaemonServer(const common::net::HostAndPort& host, common::libev::IoLoopObserver* observer)
+    : base_class(host, true, observer) {}
 
-  std::string id;
-  std::string db_hosts;
-};
+DaemonServer::~DaemonServer() {}
 
-struct Config {
-  Config();
-
-  ServerSettings server;
-};
-
-common::Error load_config_file(const common::file_system::ascii_file_string_path& config_path, Config* options) WARN_UNUSED_RESULT;
-common::Error save_config_file(const common::file_system::ascii_file_string_path& config_path, Config* options) WARN_UNUSED_RESULT;
+common::libev::tcp::TcpClient* DaemonServer::CreateClient(const common::net::socket_info& info) {
+  return new DaemonClient(this, info);
+}
 
 }

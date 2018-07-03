@@ -37,6 +37,42 @@
   "    --stop     stop running instance\n" \
   "    --reload   force running instance to reread configuration file\n"
 
+namespace {
+
+bool create_license_key(std::string* license_key) {
+#if 1
+  UNUSED(license_key);
+#else
+#if HARDWARE_LICENSE_ALGO == 0
+  static const iptv_cloud::server::license::ALGO_TYPE license_algo = iptv_cloud::server::license::HDD;
+#elif HARDWARE_LICENSE_ALGO == 1
+  static const iptv_cloud::server::license::ALGO_TYPE license_algo = iptv_cloud::server::license::MACHINE_ID;
+#else
+#error Unknown hardware license algo used
+#endif
+
+  if (!license_key) {
+    return false;
+  }
+
+  if (SIZEOFMASS(LICENSE_KEY) == 1) {  // runtime check
+    CRITICAL_LOG() << "A-a-a license key is empty, don't hack me!";
+  }
+
+  if (!iptv_cloud::server::license::GenerateHardwareHash(license_algo, license_key)) {
+    WARNING_LOG() << "Failed to generate hash!";
+    return false;
+  }
+
+  if (*license_key != LICENSE_KEY) {
+    ERROR_LOG() << "License keys not same!";
+    return false;
+  }
+#endif
+  return true;
+}
+}  // namespace
+
 int main(int argc, char** argv, char** envp) {
   bool run_as_daemon = false;
   for (int i = 1; i < argc; ++i) {
@@ -46,7 +82,12 @@ int main(int argc, char** argv, char** envp) {
     } else if (strcmp(argv[i], "--daemon") == 0) {
       run_as_daemon = true;
     } else if (strcmp(argv[i], "--stop") == 0) {
-      return sniffer::ProcessWrapper::SendStopDaemonRequest();
+      std::string license_key;
+      if (!create_license_key(&license_key)) {
+        return EXIT_FAILURE;
+      }
+
+      return sniffer::ProcessWrapper::SendStopDaemonRequest(license_key);
     } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
       std::cout << HELP_TEXT << std::endl;
       return EXIT_SUCCESS;
@@ -115,7 +156,12 @@ int main(int argc, char** argv, char** envp) {
   INIT_LOGGER(PROJECT_NAME_TITLE, level);
 #endif
 
-  sniffer::ProcessWrapper wrapper;
+  std::string license_key;
+  if (!create_license_key(&license_key)) {
+    return EXIT_FAILURE;
+  }
+
+  sniffer::ProcessWrapper wrapper(license_key);
   NOTICE_LOG() << "Running " PROJECT_VERSION_HUMAN << " in " << (run_as_daemon ? "daemon" : "common") << " mode";
 
   for (char** env = envp; *env != NULL; env++) {

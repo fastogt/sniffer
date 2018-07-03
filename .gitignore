@@ -53,3 +53,5 @@ dkms.conf
 
 #
 build_cmake
+build_cmake_release
+build/build_*_env

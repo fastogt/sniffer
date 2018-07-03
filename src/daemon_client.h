@@ -14,29 +14,27 @@
 
 #pragma once
 
-#include <string>  // for string
+#include <common/libev/tcp/tcp_client.h>  // for TcpClient
 
-#include <common/error.h>      // for Error
-#include <common/macros.h>     // for WARN_UNUSED_RESULT
-#include <common/net/types.h>  // for HostAndPort
-#include <common/file_system/path.h>
+#include "protocol/protocol.h"
 
 namespace sniffer {
 
-struct ServerSettings {
-  ServerSettings();
+class DaemonClient : public common::libev::tcp::TcpClient {
+ public:
+  typedef common::libev::tcp::TcpClient base_class;
+  DaemonClient(common::libev::IoLoop* server, const common::net::socket_info& info);
+  virtual ~DaemonClient();
 
-  std::string id;
-  std::string db_hosts;
+  bool IsVerified() const;
+  void SetVerified(bool verif);
+
+  const char* ClassName() const override;
+
+ private:
+  bool is_verified_;
 };
 
-struct Config {
-  Config();
-
-  ServerSettings server;
-};
-
-common::Error load_config_file(const common::file_system::ascii_file_string_path& config_path, Config* options) WARN_UNUSED_RESULT;
-common::Error save_config_file(const common::file_system::ascii_file_string_path& config_path, Config* options) WARN_UNUSED_RESULT;
+typedef protocol::ProtocolClient<DaemonClient> ProtocoledDaemonClient;
 
 }

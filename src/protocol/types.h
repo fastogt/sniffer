@@ -14,29 +14,15 @@
 
 #pragma once
 
-#include <string>  // for string
-
-#include <common/error.h>      // for Error
-#include <common/macros.h>     // for WARN_UNUSED_RESULT
-#include <common/net/types.h>  // for HostAndPort
-#include <common/file_system/path.h>
+#include <common/protocols/three_way_handshake/commands.h>
 
 namespace sniffer {
+namespace protocol {
 
-struct ServerSettings {
-  ServerSettings();
+typedef common::protocols::three_way_handshake::cmd_responce_t responce_t;
+typedef common::protocols::three_way_handshake::cmd_request_t request_t;
+typedef common::protocols::three_way_handshake::cmd_seq_t sequance_id_t;
+typedef std::string serializet_t;
 
-  std::string id;
-  std::string db_hosts;
-};
-
-struct Config {
-  Config();
-
-  ServerSettings server;
-};
-
-common::Error load_config_file(const common::file_system::ascii_file_string_path& config_path, Config* options) WARN_UNUSED_RESULT;
-common::Error save_config_file(const common::file_system::ascii_file_string_path& config_path, Config* options) WARN_UNUSED_RESULT;
-
-}
+}  // namespace protocol
+}  // namespace iptv_cloud

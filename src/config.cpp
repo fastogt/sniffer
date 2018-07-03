@@ -1,19 +1,15 @@
 /*  Copyright (C) 2014-2018 FastoGT. All right reserved.
-
-    This file is part of FastoTV.
-
-    FastoTV is free software: you can redistribute it and/or modify
+    This file is part of sniffer.
+    sniffer is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
-
-    FastoTV is distributed in the hope that it will be useful,
+    sniffer is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
-
     You should have received a copy of the GNU General Public License
-    along with FastoTV. If not, see <http://www.gnu.org/licenses/>.
+    along with sniffer.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "config.h"
@@ -30,21 +26,28 @@
 
 #define CONFIG_SERVER_OPTIONS "server"
 #define CONFIG_SERVER_OPTIONS_ID_FIELD "id"
+#define CONFIG_SERVER_OPTIONS_DB_HOSTS_FIELD "db_hosts"
+
+#define DEFAULT_ID_FIELD_VALUE "localhost"
+#define DEFAULT_DB_HOSTS_FIELD_VALUE "127.0.0.1"
 
 /*
   [server]
   id=localhost
-  db_host=127.0.0.1
+  db_hosts=127.0.0.1
 */
+
+#define MATCH_FIELD(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
 
 namespace sniffer {
 namespace {
 int ini_handler_fasto(void* user_data, const char* section, const char* name, const char* value) {
   Config* pconfig = reinterpret_cast<Config*>(user_data);
-
-#define MATCH(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
-  if (MATCH(CONFIG_SERVER_OPTIONS, CONFIG_SERVER_OPTIONS_ID_FIELD)) {
+  if (MATCH_FIELD(CONFIG_SERVER_OPTIONS, CONFIG_SERVER_OPTIONS_ID_FIELD)) {
     pconfig->server.id = value;
+    return 1;
+  } else if (MATCH_FIELD(CONFIG_SERVER_OPTIONS, CONFIG_SERVER_OPTIONS_DB_HOSTS_FIELD)) {
+    pconfig->server.db_hosts = value;
     return 1;
   } else {
     return 0; /* unknown section/name, error */
@@ -52,7 +55,7 @@ int ini_handler_fasto(void* user_data, const char* section, const char* name, co
 }
 }  // namespace
 
-ServerSettings::ServerSettings() : id() {}
+ServerSettings::ServerSettings() : id(DEFAULT_ID_FIELD_VALUE), db_hosts(DEFAULT_DB_HOSTS_FIELD_VALUE) {}
 
 Config::Config() : server() {}
 

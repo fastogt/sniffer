@@ -14,29 +14,18 @@
 
 #pragma once
 
-#include <string>  // for string
-
-#include <common/error.h>      // for Error
-#include <common/macros.h>     // for WARN_UNUSED_RESULT
-#include <common/net/types.h>  // for HostAndPort
-#include <common/file_system/path.h>
+#include <common/libev/tcp/tcp_server.h>
 
 namespace sniffer {
 
-struct ServerSettings {
-  ServerSettings();
+class DaemonServer : public common::libev::tcp::TcpServer {
+ public:
+  typedef common::libev::tcp::TcpServer base_class;
+  explicit DaemonServer(const common::net::HostAndPort& host, common::libev::IoLoopObserver* observer = nullptr);
+  virtual ~DaemonServer();
 
-  std::string id;
-  std::string db_hosts;
+ private:
+  virtual common::libev::tcp::TcpClient* CreateClient(const common::net::socket_info& info) override;
 };
-
-struct Config {
-  Config();
-
-  ServerSettings server;
-};
-
-common::Error load_config_file(const common::file_system::ascii_file_string_path& config_path, Config* options) WARN_UNUSED_RESULT;
-common::Error save_config_file(const common::file_system::ascii_file_string_path& config_path, Config* options) WARN_UNUSED_RESULT;
 
 }
