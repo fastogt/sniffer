@@ -24,6 +24,7 @@
 #include <common/file_system/file_system.h>
 #include <common/file_system/string_path_utils.h>
 #include <common/utils.h>
+#include <common/license/gen_hardware_hash.h>
 
 #include "process_wrapper.h"
 
@@ -40,13 +41,10 @@
 namespace {
 
 bool create_license_key(std::string* license_key) {
-#if 1
-  UNUSED(license_key);
-#else
 #if HARDWARE_LICENSE_ALGO == 0
-  static const iptv_cloud::server::license::ALGO_TYPE license_algo = iptv_cloud::server::license::HDD;
+  static const common::license::ALGO_TYPE license_algo = common::license::HDD;
 #elif HARDWARE_LICENSE_ALGO == 1
-  static const iptv_cloud::server::license::ALGO_TYPE license_algo = iptv_cloud::server::license::MACHINE_ID;
+  static const common::license::ALGO_TYPE license_algo = common::license::MACHINE_ID;
 #else
 #error Unknown hardware license algo used
 #endif
@@ -59,7 +57,7 @@ bool create_license_key(std::string* license_key) {
     CRITICAL_LOG() << "A-a-a license key is empty, don't hack me!";
   }
 
-  if (!iptv_cloud::server::license::GenerateHardwareHash(license_algo, license_key)) {
+  if (!common::license::GenerateHardwareHash(license_algo, license_key)) {
     WARNING_LOG() << "Failed to generate hash!";
     return false;
   }
@@ -68,7 +66,6 @@ bool create_license_key(std::string* license_key) {
     ERROR_LOG() << "License keys not same!";
     return false;
   }
-#endif
   return true;
 }
 }  // namespace
