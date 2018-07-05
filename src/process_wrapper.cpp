@@ -19,6 +19,10 @@
 #include <common/sys_byteorder.h>
 #include <common/convert2string.h>
 
+extern "C" {
+#include "sds_fasto.h"  // for sdsfreesplitres, sds
+}
+
 #include "daemon_client.h"
 #include "daemon_server.h"
 #include "daemon_commands.h"
@@ -111,7 +115,16 @@ void ProcessWrapper::ChildStatusChanged(common::libev::IoChild* child, int statu
 #endif
 
 void ProcessWrapper::DataReceived(common::libev::IoClient* client) {
-  UNUSED(client);
+  if (DaemonClient* dclient = dynamic_cast<DaemonClient*>(client)) {
+    common::Error err = DaemonDataReceived(dclient);
+    if (err) {
+      DEBUG_MSG_ERROR(err, common::logging::LOG_LEVEL_ERR);
+      dclient->Close();
+      delete dclient;
+    }
+  } else {
+    NOTREACHED();
+  }
 }
 
 void ProcessWrapper::DataReadyToWrite(common::libev::IoClient* client) {
@@ -143,6 +156,83 @@ protocol::sequance_id_t ProcessWrapper::NextRequestID() {
   memcpy(&bytes, &stabled, sizeof(seq_id_t));
   protocol::sequance_id_t hexed = common::utils::hex::encode(std::string(bytes, sizeof(seq_id_t)), true);
   return hexed;
+}
+
+common::Error ProcessWrapper::DaemonDataReceived(DaemonClient* dclient) {
+  CHECK(loop_->IsLoopThread());
+  std::string input_command;
+  ProtocoledDaemonClient* pclient = static_cast<ProtocoledDaemonClient*>(dclient);
+  common::Error err = pclient->ReadCommand(&input_command);
+  if (err) {
+    return err;  // i don't want handle spam, comand must be foramated according protocol
+  }
+
+  common::protocols::three_way_handshake::cmd_id_t seq;
+  protocol::sequance_id_t id;
+  std::string cmd_str;
+
+  err = common::protocols::three_way_handshake::ParseCommand(input_command, &seq, &id, &cmd_str);
+  if (err) {
+    return err;
+  }
+
+  int argc;
+  sds* argv = sdssplitargslong(cmd_str.c_str(), &argc);
+  if (argv == NULL) {
+    const std::string error_str = "PROBLEM PARSING INNER COMMAND: " + input_command;
+    return common::make_error(error_str);
+  }
+
+  INFO_LOG() << "HANDLE INNER COMMAND client[" << pclient->GetFormatedName()
+             << "] seq: " << common::protocols::three_way_handshake::CmdIdToString(seq) << ", id:" << id
+             << ", cmd: " << cmd_str;
+
+  if (seq == REQUEST_COMMAND) {
+    err = HandleRequestServiceCommand(dclient, id, argc, argv);
+    if (err) {
+      DEBUG_MSG_ERROR(err, common::logging::LOG_LEVEL_ERR);
+    }
+  } else if (seq == RESPONCE_COMMAND) {
+    err = HandleResponceServiceCommand(dclient, id, argc, argv);
+    if (err) {
+      DEBUG_MSG_ERROR(err, common::logging::LOG_LEVEL_ERR);
+    }
+  } else {
+    DNOTREACHED();
+    sdsfreesplitres(argv, argc);
+    return common::make_error("Invalid command type.");
+  }
+
+  sdsfreesplitres(argv, argc);
+  return common::Error();
+}
+
+common::Error ProcessWrapper::HandleRequestServiceCommand(DaemonClient* dclient,
+                                                          protocol::sequance_id_t id,
+                                                          int argc,
+                                                          char* argv[]) {
+  UNUSED(id);
+  UNUSED(argc);
+  char* command = argv[0];
+
+  if (IS_EQUAL_COMMAND(command, CLIENT_ACTIVATE)) {
+    return HandleRequestClientActivate(dclient, id, argc, argv);
+  } else {
+    WARNING_LOG() << "Received unknown command: " << command;
+  }
+
+  return common::Error();
+}
+
+common::Error ProcessWrapper::HandleResponceServiceCommand(DaemonClient* dclient,
+                                                           protocol::sequance_id_t id,
+                                                           int argc,
+                                                           char* argv[]) {
+  UNUSED(dclient);
+  UNUSED(id);
+  UNUSED(argc);
+  UNUSED(argv);
+  return common::Error();
 }
 
 common::Error ProcessWrapper::HandleRequestClientActivate(DaemonClient* dclient,

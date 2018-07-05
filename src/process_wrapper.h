@@ -53,7 +53,18 @@ class ProcessWrapper : public common::libev::IoLoopObserver {
   virtual void DataReadyToWrite(common::libev::IoClient* client) override;
   virtual void PostLooped(common::libev::IoLoop* server) override;
 
+  virtual common::Error HandleRequestServiceCommand(DaemonClient* dclient,
+                                                    protocol::sequance_id_t id,
+                                                    int argc,
+                                                    char* argv[]) WARN_UNUSED_RESULT;
+  virtual common::Error HandleResponceServiceCommand(DaemonClient* dclient,
+                                                     protocol::sequance_id_t id,
+                                                     int argc,
+                                                     char* argv[]) WARN_UNUSED_RESULT;
+
  private:
+  common::Error DaemonDataReceived(DaemonClient* dclient) WARN_UNUSED_RESULT;
+
   protocol::sequance_id_t NextRequestID();
   common::Error HandleRequestClientActivate(DaemonClient* dclient, protocol::sequance_id_t id, int argc, char* argv[])
       WARN_UNUSED_RESULT;
