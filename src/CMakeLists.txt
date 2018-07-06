@@ -36,11 +36,13 @@ SET(SDS_SOURCES
 SET(COMMANDS_INFO_HEADERS
   ${CMAKE_CURRENT_SOURCE_DIR}/commands_info/activate_info.h
   ${CMAKE_CURRENT_SOURCE_DIR}/commands_info/license_info.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/commands_info/stop_service_info.h
 )
 
 SET(COMMANDS_INFO_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/commands_info/activate_info.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/commands_info/license_info.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/commands_info/stop_service_info.cpp
 )
 
 SET(DATABASE_HEADERS

@@ -27,14 +27,17 @@
 #define CONFIG_SERVER_OPTIONS "server"
 #define CONFIG_SERVER_OPTIONS_ID_FIELD "id"
 #define CONFIG_SERVER_OPTIONS_DB_HOSTS_FIELD "db_hosts"
+#define CONFIG_SERVER_OPTIONS_SCANING_PATH_FIELD "scaning_path"
 
 #define DEFAULT_ID_FIELD_VALUE "localhost"
 #define DEFAULT_DB_HOSTS_FIELD_VALUE "127.0.0.1"
+#define DEFAULT_SCANING_PATH_FIELD_VALUE "~/" SERVICE_NAME
 
 /*
   [server]
   id=localhost
   db_hosts=127.0.0.1
+  scaning_path=~/sniffer
 */
 
 #define MATCH_FIELD(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
@@ -49,13 +52,19 @@ int ini_handler_fasto(void* user_data, const char* section, const char* name, co
   } else if (MATCH_FIELD(CONFIG_SERVER_OPTIONS, CONFIG_SERVER_OPTIONS_DB_HOSTS_FIELD)) {
     pconfig->server.db_hosts = value;
     return 1;
+  } else if (MATCH_FIELD(CONFIG_SERVER_OPTIONS, CONFIG_SERVER_OPTIONS_SCANING_PATH_FIELD)) {
+    pconfig->server.scaning_path = common::file_system::ascii_directory_string_path(value);
+    return 1;
   } else {
     return 0; /* unknown section/name, error */
   }
 }
 }  // namespace
 
-ServerSettings::ServerSettings() : id(DEFAULT_ID_FIELD_VALUE), db_hosts(DEFAULT_DB_HOSTS_FIELD_VALUE) {}
+ServerSettings::ServerSettings()
+    : id(DEFAULT_ID_FIELD_VALUE),
+      db_hosts(DEFAULT_DB_HOSTS_FIELD_VALUE),
+      scaning_path(DEFAULT_SCANING_PATH_FIELD_VALUE) {}
 
 Config::Config() : server() {}
 

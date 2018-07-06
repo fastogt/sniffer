@@ -21,6 +21,7 @@
 #include "config.h"
 
 #include "protocol/types.h"
+#include "sniffer_db.h"
 
 namespace sniffer {
 class DaemonClient;
@@ -28,8 +29,10 @@ class DaemonClient;
 class ProcessWrapper : public common::libev::IoLoopObserver {
  public:
   typedef uint64_t seq_id_t;
-  enum { ping_timeout_clients_seconds = 60 };
+  enum { ping_timeout_clients_seconds = 60, cleanup_seconds = 5 };
   ProcessWrapper(const std::string& license_key);
+  virtual ~ProcessWrapper();
+
   int Exec(int argc, char** argv);
 
   static int SendStopDaemonRequest(const std::string& license_key);
@@ -68,6 +71,10 @@ class ProcessWrapper : public common::libev::IoLoopObserver {
   protocol::sequance_id_t NextRequestID();
   common::Error HandleRequestClientActivate(DaemonClient* dclient, protocol::sequance_id_t id, int argc, char* argv[])
       WARN_UNUSED_RESULT;
+  common::Error HandleRequestClientStopService(DaemonClient* dclient,
+                                               protocol::sequance_id_t id,
+                                               int argc,
+                                               char* argv[]) WARN_UNUSED_RESULT;
 
   void ReadConfig(const common::file_system::ascii_file_string_path& config_path);
   static common::net::HostAndPort GetServerHostAndPort();
@@ -75,7 +82,10 @@ class ProcessWrapper : public common::libev::IoLoopObserver {
   Config config_;
   common::libev::IoLoop* loop_;
   common::libev::timer_id_t ping_client_id_timer_;
+  common::libev::timer_id_t cleanup_timer_;
   std::atomic<seq_id_t> id_;
+
+  SnifferDB db_;
 
   const std::string license_key_;
 };

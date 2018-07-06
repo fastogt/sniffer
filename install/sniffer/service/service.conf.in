@@ -1,3 +1,4 @@
 [server]
 id=localhost
-db_host="127.0.0.1"
+db_host=127.0.0.1
+scaning_path=~/@SERVICE_NAME@

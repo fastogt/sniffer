@@ -40,7 +40,7 @@ SnifferDB::~SnifferDB() {
   connection_ = nullptr;
 }
 
-common::Error SnifferDB::Connect(const std::vector<std::string>& hosts) {
+common::Error SnifferDB::Connect(const std::string& hosts) {
   common::Error err = connection_->Connect(hosts);
   if (err) {
     return err;

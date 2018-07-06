@@ -18,6 +18,7 @@
 
 #include <common/sys_byteorder.h>
 #include <common/convert2string.h>
+#include <common/net/net.h>
 
 extern "C" {
 #include "sds_fasto.h"  // for sdsfreesplitres, sds
@@ -28,27 +29,65 @@ extern "C" {
 #include "daemon_commands.h"
 
 #include "commands_info/activate_info.h"
+#include "commands_info/stop_service_info.h"
 
 #define CLIENT_PORT 6317
 
 namespace sniffer {
 
 ProcessWrapper::ProcessWrapper(const std::string& license_key)
-    : config_(), loop_(nullptr), ping_client_id_timer_(INVALID_TIMER_ID), id_(), license_key_(license_key) {
+    : config_(),
+      loop_(nullptr),
+      ping_client_id_timer_(INVALID_TIMER_ID),
+      cleanup_timer_(INVALID_TIMER_ID),
+      id_(),
+      license_key_(license_key) {
   loop_ = new DaemonServer(GetServerHostAndPort(), this);
   loop_->SetName("back_end_server");
   ReadConfig(GetConfigPath());
+}
+
+ProcessWrapper::~ProcessWrapper() {
+  destroy(&loop_);
 }
 
 int ProcessWrapper::Exec(int argc, char** argv) {
   UNUSED(argc);
   UNUSED(argv);
 
-  return loop_->Exec();
+  int res = EXIT_FAILURE;
+  common::Error err = db_.Connect(config_.server.db_hosts);
+  if (err) {
+    DEBUG_MSG_ERROR(err, common::logging::LOG_LEVEL_ERR);
+    goto finished;
+  }
+
+  res = loop_->Exec();
+finished:
+  db_.Disconnect();
+  return res;
 }
 
 int ProcessWrapper::SendStopDaemonRequest(const std::string& license_key) {
-  UNUSED(license_key);
+  commands_info::StopServiceInfo stop_req(license_key);
+  std::string stop_str;
+  common::Error serialize_error = stop_req.SerializeToString(&stop_str);
+  if (serialize_error) {
+    return EXIT_FAILURE;
+  }
+
+  protocol::request_t req = StopServiceRequest("0", stop_str);
+  common::net::HostAndPort host = GetServerHostAndPort();
+  common::net::socket_info client_info;
+  common::ErrnoError err = common::net::connect(host, common::net::ST_SOCK_STREAM, 0, &client_info);
+  if (err) {
+    return EXIT_FAILURE;
+  }
+
+  DaemonClient* connection = new DaemonClient(nullptr, client_info);
+  static_cast<ProtocoledDaemonClient*>(connection)->WriteRequest(req);
+  connection->Close();
+  delete connection;
   return EXIT_SUCCESS;
 }
 
@@ -95,6 +134,8 @@ void ProcessWrapper::TimerEmited(common::libev::IoLoop* server, common::libev::t
         }
       }
     }
+  } else if (cleanup_timer_ == id) {
+    loop_->Stop();
   }
 }
 
@@ -136,6 +177,8 @@ void ProcessWrapper::PostLooped(common::libev::IoLoop* server) {
     server->RemoveTimer(ping_client_id_timer_);
     ping_client_id_timer_ = INVALID_TIMER_ID;
   }
+
+  db_.Disconnect();
 }
 
 void ProcessWrapper::ReadConfig(const common::file_system::ascii_file_string_path& config_path) {
@@ -215,7 +258,9 @@ common::Error ProcessWrapper::HandleRequestServiceCommand(DaemonClient* dclient,
   UNUSED(argc);
   char* command = argv[0];
 
-  if (IS_EQUAL_COMMAND(command, CLIENT_ACTIVATE)) {
+  if (IS_EQUAL_COMMAND(command, CLIENT_STOP_SERVICE)) {
+    return HandleRequestClientStopService(dclient, id, argc, argv);
+  } else if (IS_EQUAL_COMMAND(command, CLIENT_ACTIVATE)) {
     return HandleRequestClientActivate(dclient, id, argc, argv);
   } else {
     WARNING_LOG() << "Received unknown command: " << command;
@@ -233,6 +278,49 @@ common::Error ProcessWrapper::HandleResponceServiceCommand(DaemonClient* dclient
   UNUSED(argc);
   UNUSED(argv);
   return common::Error();
+}
+
+common::Error ProcessWrapper::HandleRequestClientStopService(DaemonClient* dclient,
+                                                             protocol::sequance_id_t id,
+                                                             int argc,
+                                                             char* argv[]) {
+  CHECK(loop_->IsLoopThread());
+  if (argc > 1) {
+    json_object* jstop = json_tokener_parse(argv[1]);
+    if (!jstop) {
+      return common::make_error_inval();
+    }
+
+    commands_info::StopServiceInfo stop_info;
+    common::Error err = stop_info.DeSerialize(jstop);
+    json_object_put(jstop);
+    if (err) {
+      return err;
+    }
+
+    bool is_verified_request = stop_info.GetLicense() == license_key_ || dclient->IsVerified();
+    if (!is_verified_request) {
+      return common::make_error_inval();
+    }
+
+    if (cleanup_timer_ != INVALID_TIMER_ID) {
+      // in progress
+      ProtocoledDaemonClient* pdclient = static_cast<ProtocoledDaemonClient*>(dclient);
+      protocol::responce_t resp = StopServiceResponceFail(id, "Stop service in progress...");
+      pdclient->WriteResponce(resp);
+
+      return common::Error();
+    }
+
+    ProtocoledDaemonClient* pdclient = static_cast<ProtocoledDaemonClient*>(dclient);
+    protocol::responce_t resp = StopServiceResponceSuccess(id);
+    pdclient->WriteResponce(resp);
+
+    cleanup_timer_ = loop_->CreateTimer(cleanup_seconds, false);
+    return common::Error();
+  }
+
+  return common::make_error_inval();
 }
 
 common::Error ProcessWrapper::HandleRequestClientActivate(DaemonClient* dclient,

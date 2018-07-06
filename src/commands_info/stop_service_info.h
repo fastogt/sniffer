@@ -14,32 +14,28 @@
 
 #pragma once
 
-#include <common/error.h>
-#include <common/types.h>
+#include <common/time.h>
+
+#include "commands_info/license_info.h"
 
 namespace sniffer {
-namespace database {
-class Connection;
-}
+namespace commands_info {
 
-struct Entry {
-  explicit Entry(const std::string& mac_address, common::time64_t ts);
-
-  std::string mac_address;
-  common::time64_t timestamp;
-};
-
-class SnifferDB {
+class StopServiceInfo : public LicenseInfo {
  public:
-  SnifferDB();
-  ~SnifferDB();
+  typedef LicenseInfo base_class;
+  StopServiceInfo();
+  explicit StopServiceInfo(const std::string& license, common::time64_t delay = 0);
 
-  common::Error Connect(const std::string& hosts) WARN_UNUSED_RESULT;  // 127.0.0.1,127.0.01
-  common::Error Disconnect() WARN_UNUSED_RESULT;
+  common::time64_t GetDelay() const;
 
-  common::Error Insert(const Entry& entry) WARN_UNUSED_RESULT;
+ protected:
+  virtual common::Error DoDeSerialize(json_object* serialized) override;
+  virtual common::Error SerializeFields(json_object* obj) const override;
 
  private:
-  database::Connection* connection_;
+  common::time64_t delay_;
 };
-}
+
+}  // namespace server
+}  // namespace iptv_cloud

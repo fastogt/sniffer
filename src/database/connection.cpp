@@ -36,7 +36,7 @@ Connection::Connection() : cluster_(NULL), connect_future_(NULL), session_(NULL)
 
 Connection::~Connection() {}
 
-common::Error Connection::Connect(const std::vector<std::string>& hosts) {
+common::Error Connection::Connect(const std::string& hosts) {
   if (hosts.empty()) {
     return common::make_error_inval();
   }
@@ -45,11 +45,8 @@ common::Error Connection::Connect(const std::vector<std::string>& hosts) {
     return common::Error();
   }
 
-  std::string hosts_str = common::JoinString(hosts, ",");
-
-  // Initialize the cpp-driver
   CassCluster* cluster = cass_cluster_new();
-  cass_cluster_set_contact_points(cluster, hosts_str.c_str());
+  cass_cluster_set_contact_points(cluster, hosts.c_str());
   cass_cluster_set_connect_timeout(cluster, 10000);
   cass_cluster_set_request_timeout(cluster, 10000);
   cass_cluster_set_num_threads_io(cluster, 1);
@@ -72,6 +69,14 @@ common::Error Connection::Connect(const std::vector<std::string>& hosts) {
   session_ = session;
   connect_future_ = connect_future;
   return common::Error();
+}
+
+common::Error Connection::Connect(const std::vector<std::string>& hosts) {
+  if (hosts.empty()) {
+    return common::make_error_inval();
+  }
+
+  return Connect(common::JoinString(hosts, ","));
 }
 
 common::Error Connection::Disconnect() {
