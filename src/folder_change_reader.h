@@ -14,34 +14,27 @@
 
 #pragma once
 
-#include "idirectory_watcher.h"
+#include <common/libev/io_client.h>
 
-#include "events/libev_loop.h"
+namespace sniffer {
 
-namespace rixjob {
-
-class PosixDirectoryWatcher : public IDirectoryWatcher {
+class FolderChangeReader : public common::libev::IoClient {
  public:
-  enum { read_timeout_msec = 1000 };
-  PosixDirectoryWatcher(IDirectoryWatcherClient* client, const base::PathString& directory, LibevLoop* loop);
+  FolderChangeReader(common::libev::IoLoop* server, descriptor_t inode_fd, descriptor_t watcher_fd);
 
-  virtual ~PosixDirectoryWatcher();
+  virtual common::Error Write(const void* data, size_t size, size_t* nwrite_out) WARN_UNUSED_RESULT;
+
+  virtual common::Error Read(unsigned char* out_data, size_t max_size, size_t* nread_out) WARN_UNUSED_RESULT;
+  virtual common::Error Read(char* out_data, size_t max_size, size_t* nread_out) WARN_UNUSED_RESULT;
+
+ protected:  // executed IoLoop
+  virtual descriptor_t GetFd() const;
 
  private:
-  void OnDirChanged();
+  virtual common::Error DoClose();
 
-  virtual int PreExecImpl() override;
-  virtual int ExecImpl() override;
-  virtual int PostExecImpl() override;
-  virtual void QuitImpl() override;
-
-  static void dir_changed_cb(struct ev_loop* loop, ev_io* w, int revents);
-
-  int inode_fd_;
-  int watcher_fd_;
-
-  ev_io* watcher_;
-  LibevLoop* loop_;
+  descriptor_t watcher_fd_;
+  descriptor_t inode_fd_;
 };
 
-}  // namespace rixjob
+}  // namespace sniffer

@@ -25,6 +25,7 @@
 
 namespace sniffer {
 class DaemonClient;
+class FolderChangeReader;
 
 class ProcessWrapper : public common::libev::IoLoopObserver {
  public:
@@ -65,8 +66,11 @@ class ProcessWrapper : public common::libev::IoLoopObserver {
                                                      int argc,
                                                      char* argv[]) WARN_UNUSED_RESULT;
 
+  virtual void HandlePcapFile(const common::file_system::ascii_file_string_path& path);
+
  private:
   common::Error DaemonDataReceived(DaemonClient* dclient) WARN_UNUSED_RESULT;
+  common::Error FolderChanged(FolderChangeReader* fclient) WARN_UNUSED_RESULT;
 
   protocol::sequance_id_t NextRequestID();
   common::Error HandleRequestClientActivate(DaemonClient* dclient, protocol::sequance_id_t id, int argc, char* argv[])
@@ -83,6 +87,7 @@ class ProcessWrapper : public common::libev::IoLoopObserver {
   common::libev::IoLoop* loop_;
   common::libev::timer_id_t ping_client_id_timer_;
   common::libev::timer_id_t cleanup_timer_;
+  FolderChangeReader* watcher_;
   std::atomic<seq_id_t> id_;
 
   SnifferDB db_;

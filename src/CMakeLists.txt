@@ -8,6 +8,8 @@ SET(GLOBAL_HEADERS
   ${CMAKE_CURRENT_SOURCE_DIR}/daemon_server.h
   ${CMAKE_CURRENT_SOURCE_DIR}/daemon_client.h
   ${CMAKE_CURRENT_SOURCE_DIR}/daemon_commands.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/folder_change_reader.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/pcaper.h
 )
 SET(GLOBAL_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/sniffer_db.cpp
@@ -16,6 +18,8 @@ SET(GLOBAL_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/daemon_server.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/daemon_client.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/daemon_commands.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/folder_change_reader.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/pcaper.cpp
 )
 
 SET(PROTOCOL_HEADERS

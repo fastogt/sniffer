@@ -14,6 +14,9 @@
 
 #include "process_wrapper.h"
 
+#include <sys/inotify.h>
+#include <netinet/ether.h>
+
 #include <stdlib.h>
 
 #include <common/sys_byteorder.h>
@@ -31,7 +34,16 @@ extern "C" {
 #include "commands_info/activate_info.h"
 #include "commands_info/stop_service_info.h"
 
+#include "folder_change_reader.h"
+
+#include "pcaper.h"
+
+#include "pcap_packages/radiotap_header.h"
+
 #define CLIENT_PORT 6317
+
+#define EVENT_SIZE (sizeof(struct inotify_event))
+#define BUF_LEN (1024 * (EVENT_SIZE + 16))
 
 namespace sniffer {
 
@@ -40,6 +52,7 @@ ProcessWrapper::ProcessWrapper(const std::string& license_key)
       loop_(nullptr),
       ping_client_id_timer_(INVALID_TIMER_ID),
       cleanup_timer_(INVALID_TIMER_ID),
+      watcher_(nullptr),
       id_(),
       license_key_(license_key) {
   loop_ = new DaemonServer(GetServerHostAndPort(), this);
@@ -96,8 +109,21 @@ common::file_system::ascii_file_string_path ProcessWrapper::GetConfigPath() {
 }
 
 void ProcessWrapper::PreLooped(common::libev::IoLoop* server) {
-  UNUSED(server);
   ping_client_id_timer_ = server->CreateTimer(ping_timeout_clients_seconds, true);
+
+  int inode_fd = inotify_init();
+  if (inode_fd == ERROR_RESULT_VALUE) {
+    return;
+  }
+
+  const std::string dir_str = config_.server.scaning_path.GetPath();
+  int watcher_fd = inotify_add_watch(inode_fd, dir_str.c_str(), IN_CLOSE_WRITE);
+  if (watcher_fd == ERROR_RESULT_VALUE) {
+    return;
+  }
+
+  watcher_ = new FolderChangeReader(loop_, inode_fd, watcher_fd);
+  server->RegisterClient(watcher_);
 }
 
 void ProcessWrapper::Accepted(common::libev::IoClient* client) {
@@ -163,6 +189,13 @@ void ProcessWrapper::DataReceived(common::libev::IoClient* client) {
       dclient->Close();
       delete dclient;
     }
+  } else if (FolderChangeReader* fclient = dynamic_cast<FolderChangeReader*>(client)) {
+    common::Error err = FolderChanged(fclient);
+    if (err) {
+      DEBUG_MSG_ERROR(err, common::logging::LOG_LEVEL_ERR);
+      dclient->Close();
+      delete dclient;
+    }
   } else {
     NOTREACHED();
   }
@@ -179,6 +212,10 @@ void ProcessWrapper::PostLooped(common::libev::IoLoop* server) {
   }
 
   db_.Disconnect();
+
+  watcher_->Close();
+  delete watcher_;
+  watcher_ = nullptr;
 }
 
 void ProcessWrapper::ReadConfig(const common::file_system::ascii_file_string_path& config_path) {
@@ -199,6 +236,69 @@ protocol::sequance_id_t ProcessWrapper::NextRequestID() {
   memcpy(&bytes, &stabled, sizeof(seq_id_t));
   protocol::sequance_id_t hexed = common::utils::hex::encode(std::string(bytes, sizeof(seq_id_t)), true);
   return hexed;
+}
+
+common::Error ProcessWrapper::FolderChanged(FolderChangeReader* fclient) {
+  char data[BUF_LEN] = {0};
+  size_t nread;
+  common::Error err = fclient->Read(data, BUF_LEN, &nread);
+  if (err) {
+    return err;
+  }
+
+  size_t i = 0;
+  while (i < nread) {
+    struct inotify_event* event = reinterpret_cast<struct inotify_event*>(data + i);
+    if (event->len) {
+      if (event->mask & IN_CLOSE_WRITE) {
+        if (event->mask & IN_ISDIR) {
+        } else {
+          std::string file_name = event->name;
+          auto path = config_.server.scaning_path.MakeFileStringPath(file_name);
+          if (path) {
+            HandlePcapFile(*path);
+          }
+        }
+      }
+    }
+    i += EVENT_SIZE + event->len;
+  }
+
+  return common::Error();
+}
+
+void ProcessWrapper::HandlePcapFile(const common::file_system::ascii_file_string_path& path) {
+  INFO_LOG() << "Handle pcap file path: " << path.GetPath();
+  Pcaper pcap;
+  common::ErrnoError errn = pcap.Open(path);
+  if (errn) {
+    return;
+  }
+
+  auto parse_cb = [this](const unsigned char* packet, const pcap_pkthdr& header) {
+    bpf_u_int32 packet_len = header.caplen;
+    if (packet_len < sizeof(struct radiotap_header)) {
+      return;
+    }
+
+    struct radiotap_header* radio = (struct radiotap_header*)packet;
+    packet += sizeof(struct radiotap_header);
+    packet_len -= sizeof(struct radiotap_header);
+    if (packet_len < sizeof(struct ieee80211header)) {
+      return;
+    }
+
+    struct ieee80211header* beac = (struct ieee80211header*)packet;
+    char* mac_1 = ether_ntoa((struct ether_addr*)beac->addr1);
+    char* mac_2 = ether_ntoa((struct ether_addr*)beac->addr2);
+    char* mac_3 = ether_ntoa((struct ether_addr*)beac->addr3);
+
+    Entry ent(mac_1, 0);
+    db_.Insert(ent);
+  };
+
+  pcap.Parse(parse_cb);
+  pcap.Close();
 }
 
 common::Error ProcessWrapper::DaemonDataReceived(DaemonClient* dclient) {
