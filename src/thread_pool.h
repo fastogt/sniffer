@@ -14,33 +14,38 @@
 
 #pragma once
 
-#include <common/error.h>
-#include <common/types.h>
+#include <queue>
+#include <vector>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 
 namespace sniffer {
-namespace database {
-class Connection;
-}
 
-struct Entry {
-  explicit Entry(const std::string& mac_address, common::time64_t ts);
-
-  std::string mac_address;
-  common::time64_t timestamp;
-};
-
-class SnifferDB {
+class ThreadPool {
  public:
-  SnifferDB();
-  ~SnifferDB();
+  typedef std::thread thread_t;
+  typedef std::vector<thread_t> workers_t;
+  typedef std::function<void()> task_t;
+  typedef std::queue<task_t> tasks_t;
+  ThreadPool();
+  ~ThreadPool();
 
-  common::Error Connect(const std::string& hosts) WARN_UNUSED_RESULT;  // 127.0.0.1,127.0.01
-  common::Error Disconnect() WARN_UNUSED_RESULT;
-
-  common::Error Insert(const Entry& entry) WARN_UNUSED_RESULT;
-  common::Error Insert(const std::vector<Entry>& entries) WARN_UNUSED_RESULT;
+  void Post(task_t task);
+  void Start(uint16_t count_threads);
+  void Stop();
+  void Restart();
 
  private:
-  database::Connection* connection_;
+  void InitWork(uint16_t threads);
+  void WaitFinishWork();
+
+  void RunWork();
+
+  workers_t workers_;
+  tasks_t tasks_;
+  std::mutex queue_mutex_;
+  std::condition_variable condition_;
+  bool stop_;
 };
 }

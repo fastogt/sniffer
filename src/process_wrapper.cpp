@@ -54,6 +54,8 @@ ProcessWrapper::ProcessWrapper(const std::string& license_key)
       cleanup_timer_(INVALID_TIMER_ID),
       watcher_(nullptr),
       id_(),
+      db_(),
+      thread_pool_(),
       license_key_(license_key) {
   loop_ = new DaemonServer(GetServerHostAndPort(), this);
   loop_->SetName("back_end_server");
@@ -124,6 +126,8 @@ void ProcessWrapper::PreLooped(common::libev::IoLoop* server) {
 
   watcher_ = new FolderChangeReader(loop_, inode_fd, watcher_fd);
   server->RegisterClient(watcher_);
+
+  thread_pool_.Start(thread_pool_size);
 }
 
 void ProcessWrapper::Accepted(common::libev::IoClient* client) {
@@ -216,6 +220,8 @@ void ProcessWrapper::PostLooped(common::libev::IoLoop* server) {
   watcher_->Close();
   delete watcher_;
   watcher_ = nullptr;
+
+  thread_pool_.Stop();
 }
 
 void ProcessWrapper::ReadConfig(const common::file_system::ascii_file_string_path& config_path) {
@@ -268,37 +274,66 @@ common::Error ProcessWrapper::FolderChanged(FolderChangeReader* fclient) {
 }
 
 void ProcessWrapper::HandlePcapFile(const common::file_system::ascii_file_string_path& path) {
+  CHECK(loop_->IsLoopThread());
+
   INFO_LOG() << "Handle pcap file path: " << path.GetPath();
-  Pcaper pcap;
-  common::ErrnoError errn = pcap.Open(path);
-  if (errn) {
-    return;
-  }
-
-  auto parse_cb = [this](const unsigned char* packet, const pcap_pkthdr& header) {
-    bpf_u_int32 packet_len = header.caplen;
-    if (packet_len < sizeof(struct radiotap_header)) {
+  auto pcap_task = [path, this]() {
+    std::string file_name = path.GetBaseFileName();
+    common::time64_t ts_file;
+    if (!common::ConvertFromString(file_name, &ts_file)) {
       return;
     }
 
-    struct radiotap_header* radio = (struct radiotap_header*)packet;
-    packet += sizeof(struct radiotap_header);
-    packet_len -= sizeof(struct radiotap_header);
-    if (packet_len < sizeof(struct ieee80211header)) {
+    Pcaper pcap;
+    common::ErrnoError errn = pcap.Open(path);
+    if (errn) {
       return;
     }
 
-    struct ieee80211header* beac = (struct ieee80211header*)packet;
-    char* mac_1 = ether_ntoa((struct ether_addr*)beac->addr1);
-    char* mac_2 = ether_ntoa((struct ether_addr*)beac->addr2);
-    char* mac_3 = ether_ntoa((struct ether_addr*)beac->addr3);
+    std::vector<Entry> entries;
+    auto parse_cb = [ts_file, &entries](const unsigned char* packet, const pcap_pkthdr& header) {
+      bpf_u_int32 packet_len = header.caplen;
+      if (packet_len < sizeof(struct radiotap_header)) {
+        return;
+      }
 
-    Entry ent(mac_1, 0);
-    db_.Insert(ent);
+      struct radiotap_header* radio = (struct radiotap_header*)packet;
+      packet += sizeof(struct radiotap_header);
+      packet_len -= sizeof(struct radiotap_header);
+      if (packet_len < sizeof(struct ieee80211header)) {
+        return;
+      }
+
+      struct ieee80211header* beac = (struct ieee80211header*)packet;
+      char* mac_1 = ether_ntoa((struct ether_addr*)beac->addr1);
+      char* mac_2 = ether_ntoa((struct ether_addr*)beac->addr2);
+      char* mac_3 = ether_ntoa((struct ether_addr*)beac->addr3);
+      struct timeval tv = header.ts;
+      common::time64_t ts = common::time::timeval2mstime(&tv);
+      Entry ent(mac_1, ts_file * 1000 + ts);
+      entries.push_back(ent);
+    };
+
+    pcap.Parse(parse_cb);
+    pcap.Close();
+    TouchEntries(entries);
   };
 
-  pcap.Parse(parse_cb);
-  pcap.Close();
+  thread_pool_.Post(pcap_task);
+}
+
+void ProcessWrapper::TouchEntries(const std::vector<Entry>& entries) {
+  loop_->ExecInLoopThread([this, entries]() { HandleEntries(entries); });
+}
+
+void ProcessWrapper::HandleEntries(const std::vector<Entry>& entries) {
+  CHECK(loop_->IsLoopThread());
+  INFO_LOG() << "Handle entries count: " << entries.size();
+
+  common::Error err = db_.Insert(entries);
+  if (err) {
+    DEBUG_MSG_ERROR(err, common::logging::LOG_LEVEL_ERR);
+  }
 }
 
 common::Error ProcessWrapper::DaemonDataReceived(DaemonClient* dclient) {

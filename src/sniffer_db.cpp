@@ -31,6 +31,15 @@
 
 namespace sniffer {
 
+namespace {
+void init_insert(const Entry& entry, CassStatement* statement) {
+  CassError err = cass_statement_bind_string(statement, 0, entry.mac_address.c_str());
+  DCHECK(err == CASS_OK);
+  err = cass_statement_bind_int64(statement, 1, entry.timestamp);
+  DCHECK(err == CASS_OK);
+}
+}
+
 Entry::Entry(const std::string& mac, common::time64_t ts) : mac_address(mac), timestamp(ts) {}
 
 SnifferDB::SnifferDB() : connection_(new database::Connection) {}
@@ -72,14 +81,25 @@ common::Error SnifferDB::Disconnect() {
 }
 
 common::Error SnifferDB::Insert(const Entry& entry) {
-  auto prep_stat_cb = [entry](CassStatement* statement) {
-    CassError err = cass_statement_bind_string(statement, 0, entry.mac_address.c_str());
-    DCHECK(err == CASS_OK);
-    err = cass_statement_bind_int64(statement, 1, entry.timestamp);
-    DCHECK(err == CASS_OK);
-  };
-
+  auto prep_stat_cb = [entry](CassStatement* statement) { init_insert(entry, statement); };
   common::Error err = connection_->Execute(INSERT_QUERY, 2, prep_stat_cb);
+  if (err) {
+    return err;
+  }
+
+  return common::Error();
+}
+
+common::Error SnifferDB::Insert(const std::vector<Entry>& entries) {
+  auto prep_batch_cb = [entries](CassBatch* batch) {
+    for (size_t i = 0; i < entries.size(); ++i) {
+      CassStatement* statement = cass_statement_new(INSERT_QUERY, 2);
+      init_insert(entries[i], statement);
+      cass_batch_add_statement(batch, statement);
+      cass_statement_free(statement);
+    }
+  };
+  common::Error err = connection_->ExecuteBatch(prep_batch_cb);
   if (err) {
     return err;
   }

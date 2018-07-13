@@ -22,6 +22,7 @@
 
 #include "protocol/types.h"
 #include "sniffer_db.h"
+#include "thread_pool.h"
 
 namespace sniffer {
 class DaemonClient;
@@ -30,7 +31,7 @@ class FolderChangeReader;
 class ProcessWrapper : public common::libev::IoLoopObserver {
  public:
   typedef uint64_t seq_id_t;
-  enum { ping_timeout_clients_seconds = 60, cleanup_seconds = 5 };
+  enum { ping_timeout_clients_seconds = 60, cleanup_seconds = 5, thread_pool_size = 3 };
   ProcessWrapper(const std::string& license_key);
   virtual ~ProcessWrapper();
 
@@ -67,8 +68,11 @@ class ProcessWrapper : public common::libev::IoLoopObserver {
                                                      char* argv[]) WARN_UNUSED_RESULT;
 
   virtual void HandlePcapFile(const common::file_system::ascii_file_string_path& path);
+  virtual void HandleEntries(const std::vector<Entry>& entries);
 
  private:
+  void TouchEntries(const std::vector<Entry>& entries);
+
   common::Error DaemonDataReceived(DaemonClient* dclient) WARN_UNUSED_RESULT;
   common::Error FolderChanged(FolderChangeReader* fclient) WARN_UNUSED_RESULT;
 
@@ -91,6 +95,8 @@ class ProcessWrapper : public common::libev::IoLoopObserver {
   std::atomic<seq_id_t> id_;
 
   SnifferDB db_;
+
+  ThreadPool thread_pool_;
 
   const std::string license_key_;
 };

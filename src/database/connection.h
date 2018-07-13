@@ -24,7 +24,8 @@
 namespace sniffer {
 namespace database {
 
-typedef std::function<void(CassStatement* result)> statemet_prepare_func_t;
+typedef std::function<void(CassStatement* statement)> statemet_prepare_func_t;
+typedef std::function<void(CassBatch* batch)> batch_prepare_func_t;
 typedef std::function<void(CassFuture* result)> exec_func_t;
 
 struct ExecuteInfo {
@@ -49,6 +50,9 @@ class Connection {
                         size_t parameter_count,
                         statemet_prepare_func_t prep_stat = statemet_prepare_func_t(),
                         exec_func_t succsess_cb = exec_func_t()) WARN_UNUSED_RESULT;
+
+  common::Error ExecuteBatch(batch_prepare_func_t prep_stat,
+                             exec_func_t succsess_cb = exec_func_t()) WARN_UNUSED_RESULT;
 
   bool IsConnected() const;
 

@@ -129,11 +129,12 @@ common::Error Connection::Execute(const std::string& query,
   if (prep_stat) {
     prep_stat(statement);
   }
+
   CassFuture* result_future = cass_session_execute(session_, statement);
-  cass_future_wait(result_future);
+  // cass_future_wait(result_future);
+  cass_statement_free(statement);
   if (cass_future_error_code(result_future) != CASS_OK) {
     common::Error ferr = make_cassandra_error(result_future);
-    cass_statement_free(statement);
     cass_future_free(result_future);
     return ferr;
   }
@@ -142,7 +143,36 @@ common::Error Connection::Execute(const std::string& query,
     succsess_cb(result_future);
   }
 
-  cass_statement_free(statement);
+  cass_future_free(result_future);
+  return common::Error();
+}
+
+common::Error Connection::ExecuteBatch(batch_prepare_func_t prep_stat, exec_func_t succsess_cb) {
+  if (!prep_stat) {
+    return common::make_error_inval();
+  }
+
+  if (!IsConnected()) {
+    return common::make_error_inval();
+  }
+
+  CassBatch* batch = cass_batch_new(CASS_BATCH_TYPE_LOGGED);
+  if (prep_stat) {
+    prep_stat(batch);
+  }
+
+  CassFuture* result_future = cass_session_execute_batch(session_, batch);
+  cass_batch_free(batch);
+  if (cass_future_error_code(result_future) != CASS_OK) {
+    common::Error ferr = make_cassandra_error(result_future);
+    cass_future_free(result_future);
+    return ferr;
+  }
+
+  if (succsess_cb) {
+    succsess_cb(result_future);
+  }
+
   cass_future_free(result_future);
   return common::Error();
 }
