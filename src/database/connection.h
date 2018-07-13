@@ -41,7 +41,7 @@ class Connection {
   Connection();
   ~Connection();
 
-  common::Error Connect(const std::string& hosts) WARN_UNUSED_RESULT;  // 127.0.0.1,127.0.01
+  common::Error Connect(const std::string& hosts) WARN_UNUSED_RESULT;  // 127.0.0.1,127.0.0.2
   common::Error Connect(const std::vector<std::string>& hosts) WARN_UNUSED_RESULT;
   common::Error Disconnect() WARN_UNUSED_RESULT;
 

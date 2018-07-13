@@ -22,8 +22,8 @@
 
 namespace sniffer {
 
-FolderChangeReader::FolderChangeReader(common::libev::IoLoop* server, descriptor_t inode_fd, descriptor_t watcher_fd)
-    : common::libev::IoClient(server), inode_fd_(inode_fd), watcher_fd_(watcher_fd) {}
+FolderChangeReader::FolderChangeReader(common::libev::IoLoop* server, descriptor_t inode_fd)
+    : common::libev::IoClient(server), inode_fd_(inode_fd), watchers_() {}
 
 common::Error FolderChangeReader::Write(const void* data, size_t size, size_t* nwrite_out) {
   if (!data || !size || !nwrite_out) {
@@ -64,6 +64,86 @@ common::Error FolderChangeReader::Read(char* out_data, size_t max_size, size_t* 
   return common::Error();
 }
 
+bool FolderChangeReader::FindWatcherByDescriptor(descriptor_t fd, const Watcher** watcher) const {
+  if (!watcher || fd == INVALID_DESCRIPTOR) {
+    return false;
+  }
+
+  for (size_t i = 0; i < watchers_.size(); ++i) {
+    if (watchers_[i].fd == fd) {
+      *watcher = &watchers_[i];
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool FolderChangeReader::FindWatcherByPath(const common::file_system::ascii_directory_string_path& directory,
+                                           const Watcher** watcher) const {
+  if (!watcher || !directory.IsValid()) {
+    return false;
+  }
+
+  for (size_t i = 0; i < watchers_.size(); ++i) {
+    if (watchers_[i].directory == directory) {
+      *watcher = &watchers_[i];
+      return true;
+    }
+  }
+
+  return false;
+}
+
+common::Error FolderChangeReader::AddDirWatcher(const common::file_system::ascii_directory_string_path& directory,
+                                                uint32_t mask) {
+  if (!directory.IsValid()) {
+    return common::make_error_inval();
+  }
+
+  const Watcher* watcher = nullptr;
+  if (FindWatcherByPath(directory, &watcher)) {
+    common::ErrnoError errn = common::make_errno_error(EEXIST);
+    return common::make_error_from_errno(errn);
+  }
+
+  std::string dir_str = directory.GetPath();
+  int watcher_fd = inotify_add_watch(inode_fd_, dir_str.c_str(), mask);
+  if (watcher_fd == INVALID_DESCRIPTOR) {
+    common::ErrnoError errn = common::make_errno_error(errno);
+    return common::make_error_from_errno(errn);
+  }
+
+  watchers_.push_back({directory, watcher_fd});
+  return common::Error();
+}
+
+common::Error FolderChangeReader::RemoveDirWatcher(const common::file_system::ascii_directory_string_path& directory) {
+  if (!directory.IsValid()) {
+    return common::make_error_inval();
+  }
+
+  for (auto it = watchers_.begin(); it != watchers_.end(); ++it) {
+    if (it->directory == directory) {
+      if (it->fd != INVALID_DESCRIPTOR) {
+        inotify_rm_watch(inode_fd_, it->fd);
+      }
+      watchers_.erase(it);
+      break;
+    }
+  }
+  return common::Error();
+}
+
+void FolderChangeReader::Clear() {
+  for (auto it = watchers_.begin(); it != watchers_.end(); ++it) {
+    if (it->fd != INVALID_DESCRIPTOR) {
+      inotify_rm_watch(inode_fd_, it->fd);
+    }
+  }
+  watchers_.clear();
+}
+
 descriptor_t FolderChangeReader::GetFd() const {
   return inode_fd_;
 }
@@ -73,10 +153,7 @@ common::Error FolderChangeReader::DoClose() {
     return common::Error();
   }
 
-  if (watcher_fd_ != INVALID_DESCRIPTOR) {
-    inotify_rm_watch(inode_fd_, watcher_fd_);
-  }
-
+  Clear();
   common::net::close(inode_fd_);
   return common::Error();
 }

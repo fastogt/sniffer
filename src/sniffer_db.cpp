@@ -76,6 +76,33 @@ common::Error SnifferDB::Connect(const std::string& hosts) {
   return common::Error();
 }
 
+common::Error SnifferDB::Connect(const std::vector<std::string>& hosts) {
+  common::Error err = connection_->Connect(hosts);
+  if (err) {
+    return err;
+  }
+
+  err = connection_->Execute(CREATE_KEYSPACE_QUERY, 0);
+  if (err) {
+    connection_->Disconnect();
+    return err;
+  }
+
+  err = connection_->Execute(USE_KEYSPACE_QUERY, 0);
+  if (err) {
+    connection_->Disconnect();
+    return err;
+  }
+
+  err = connection_->Execute(CREATE_TABLE_QUERY, 0);
+  if (err) {
+    connection_->Disconnect();
+    return err;
+  }
+
+  return common::Error();
+}
+
 common::Error SnifferDB::Disconnect() {
   return connection_->Disconnect();
 }

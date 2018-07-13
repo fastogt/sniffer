@@ -15,17 +15,31 @@
 #pragma once
 
 #include <common/libev/io_client.h>
+#include <common/file_system/path.h>
 
 namespace sniffer {
 
+struct Watcher {
+  common::file_system::ascii_directory_string_path directory;
+  descriptor_t fd;
+};
+
 class FolderChangeReader : public common::libev::IoClient {
  public:
-  FolderChangeReader(common::libev::IoLoop* server, descriptor_t inode_fd, descriptor_t watcher_fd);
+  FolderChangeReader(common::libev::IoLoop* server, descriptor_t inode_fd);
 
   virtual common::Error Write(const void* data, size_t size, size_t* nwrite_out) WARN_UNUSED_RESULT;
 
   virtual common::Error Read(unsigned char* out_data, size_t max_size, size_t* nread_out) WARN_UNUSED_RESULT;
   virtual common::Error Read(char* out_data, size_t max_size, size_t* nread_out) WARN_UNUSED_RESULT;
+
+  bool FindWatcherByDescriptor(descriptor_t fd, const Watcher** watcher) const WARN_UNUSED_RESULT;
+  bool FindWatcherByPath(const common::file_system::ascii_directory_string_path& directory,
+                         const Watcher** watcher) const WARN_UNUSED_RESULT;
+  common::Error AddDirWatcher(const common::file_system::ascii_directory_string_path& directory,
+                              uint32_t mask) WARN_UNUSED_RESULT;
+  common::Error RemoveDirWatcher(const common::file_system::ascii_directory_string_path& directory) WARN_UNUSED_RESULT;
+  void Clear();
 
  protected:  // executed IoLoop
   virtual descriptor_t GetFd() const;
@@ -33,8 +47,8 @@ class FolderChangeReader : public common::libev::IoClient {
  private:
   virtual common::Error DoClose();
 
-  descriptor_t watcher_fd_;
   descriptor_t inode_fd_;
+  std::vector<Watcher> watchers_;
 };
 
 }  // namespace sniffer

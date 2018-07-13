@@ -118,13 +118,10 @@ void ProcessWrapper::PreLooped(common::libev::IoLoop* server) {
     return;
   }
 
-  const std::string dir_str = config_.server.scaning_path.GetPath();
-  int watcher_fd = inotify_add_watch(inode_fd, dir_str.c_str(), IN_CLOSE_WRITE);
-  if (watcher_fd == ERROR_RESULT_VALUE) {
-    return;
+  watcher_ = new FolderChangeReader(loop_, inode_fd);
+  for (size_t i = 0; i < config_.server.scaning_paths.size(); ++i) {
+    watcher_->AddDirWatcher(config_.server.scaning_paths[i], IN_CLOSE_WRITE);
   }
-
-  watcher_ = new FolderChangeReader(loop_, inode_fd, watcher_fd);
   server->RegisterClient(watcher_);
 
   thread_pool_.Start(thread_pool_size);
@@ -259,10 +256,13 @@ common::Error ProcessWrapper::FolderChanged(FolderChangeReader* fclient) {
       if (event->mask & IN_CLOSE_WRITE) {
         if (event->mask & IN_ISDIR) {
         } else {
-          std::string file_name = event->name;
-          auto path = config_.server.scaning_path.MakeFileStringPath(file_name);
-          if (path) {
-            HandlePcapFile(*path);
+          const Watcher* watcher = nullptr;
+          if (fclient->FindWatcherByDescriptor(event->wd, &watcher)) {
+            std::string file_name = event->name;
+            auto path = watcher->directory.MakeFileStringPath(file_name);
+            if (path) {
+              HandlePcapFile(*path);
+            }
           }
         }
       }

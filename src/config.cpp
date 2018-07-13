@@ -17,6 +17,7 @@
 #include <string.h>  // for strcmp
 
 #include <common/logger.h>  // for COMPACT_LOG_WARNING, WARNING_LOG
+#include <common/string_util.h>
 
 #include "inih/ini.h"
 
@@ -37,7 +38,7 @@
   [server]
   id=localhost
   db_hosts=127.0.0.1
-  scaning_path=~/sniffer
+  scaning_paths=~/sniffer
 */
 
 #define MATCH_FIELD(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
@@ -50,10 +51,22 @@ int ini_handler_fasto(void* user_data, const char* section, const char* name, co
     pconfig->server.id = value;
     return 1;
   } else if (MATCH_FIELD(CONFIG_SERVER_OPTIONS, CONFIG_SERVER_OPTIONS_DB_HOSTS_FIELD)) {
-    pconfig->server.db_hosts = value;
+    std::vector<std::string> result;
+    size_t count = common::Tokenize(value, ",", &result);
+    if (count) {
+      pconfig->server.db_hosts = result;
+    }
     return 1;
   } else if (MATCH_FIELD(CONFIG_SERVER_OPTIONS, CONFIG_SERVER_OPTIONS_SCANING_PATH_FIELD)) {
-    pconfig->server.scaning_path = common::file_system::ascii_directory_string_path(value);
+    std::vector<std::string> result;
+    size_t count = common::Tokenize(value, ",", &result);
+    if (count) {
+      std::vector<common::file_system::ascii_directory_string_path> dir_result;
+      for (size_t i = 0; i < result.size(); ++i) {
+        dir_result.push_back(common::file_system::ascii_directory_string_path(result[i]));
+      }
+      pconfig->server.scaning_paths = dir_result;
+    }
     return 1;
   } else {
     return 0; /* unknown section/name, error */
@@ -63,8 +76,8 @@ int ini_handler_fasto(void* user_data, const char* section, const char* name, co
 
 ServerSettings::ServerSettings()
     : id(DEFAULT_ID_FIELD_VALUE),
-      db_hosts(DEFAULT_DB_HOSTS_FIELD_VALUE),
-      scaning_path(DEFAULT_SCANING_PATH_FIELD_VALUE) {}
+      db_hosts{DEFAULT_DB_HOSTS_FIELD_VALUE},
+      scaning_paths{common::file_system::ascii_directory_string_path(DEFAULT_SCANING_PATH_FIELD_VALUE)} {}
 
 Config::Config() : server() {}
 
