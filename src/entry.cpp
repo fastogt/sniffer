@@ -16,5 +16,5 @@
 
 namespace sniffer {
 
-Entry::Entry(const std::string& mac, common::time64_t ts) : mac_address(mac), timestamp(ts) {}
+Entry::Entry(const std::string& mac, common::time64_t ts, int8_t ssi) : mac_address(mac), timestamp(ts), ssi(ssi) {}
 }

@@ -22,6 +22,7 @@
 #include <common/sys_byteorder.h>
 #include <common/convert2string.h>
 #include <common/net/net.h>
+#include <common/file_system/file_system.h>
 
 extern "C" {
 #include "sds_fasto.h"  // for sdsfreesplitres, sds
@@ -45,6 +46,8 @@ extern "C" {
 
 #define EVENT_SIZE (sizeof(struct inotify_event))
 #define BUF_LEN (1024 * (EVENT_SIZE + 16))
+
+static const unsigned char BROADCAST_MAC[ETH_ALEN] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 namespace sniffer {
 
@@ -293,9 +296,11 @@ void ProcessWrapper::HandlePcapFile(const common::file_system::ascii_file_string
     }
 
     std::vector<Entry> entries;
-    auto parse_cb = [path, ts_file, &entries](const unsigned char* packet, const pcap_pkthdr& header) {
+    size_t pcap_pos = 0;
+    auto parse_cb = [path, ts_file, &entries, &pcap_pos](const unsigned char* packet, const pcap_pkthdr& header) {
       bpf_u_int32 packet_len = header.caplen;
       if (packet_len < sizeof(struct radiotap_header)) {
+        pcap_pos++;
         return;
       }
 
@@ -303,23 +308,33 @@ void ProcessWrapper::HandlePcapFile(const common::file_system::ascii_file_string
       packet += sizeof(struct radiotap_header);
       packet_len -= sizeof(struct radiotap_header);
       if (packet_len < sizeof(struct ieee80211header)) {
+        pcap_pos++;
         return;
       }
 
+      // beacon
       struct ieee80211header* beac = (struct ieee80211header*)packet;
-      char* mac_1 = ether_ntoa((struct ether_addr*)beac->addr1);
-      char* mac_2 = ether_ntoa((struct ether_addr*)beac->addr2);
-      char* mac_3 = ether_ntoa((struct ether_addr*)beac->addr3);
+      if (ieee80211_dataqos(beac)) {
+      }
+
+      std::string receiver_mac = ether_ntoa((struct ether_addr*)beac->addr1);
+      std::string transmit_mac = ether_ntoa((struct ether_addr*)beac->addr2);
+      std::string destination_mac = ether_ntoa((struct ether_addr*)beac->addr3);
       struct timeval tv = header.ts;
       common::time64_t ts = common::time::timeval2mstime(&tv);
-      Entry ent(mac_1, ts_file * 1000 + ts);
+      Entry ent(receiver_mac, ts_file * 1000 + ts, radio->wt_ssi_signal);
       entries.push_back(ent);
+      pcap_pos++;
     };
 
     pcap.Parse(parse_cb);
     pcap.Close();
     common::file_system::ascii_directory_string_path dir(path.GetDirectory());
     TouchEntries(dir, entries);
+    errn = common::file_system::remove_file(path.GetPath());
+    if (errn) {
+      DEBUG_MSG_ERROR(errn, common::logging::LOG_LEVEL_WARNING);
+    }
   };
 
   thread_pool_.Post(pcap_task);
@@ -333,10 +348,11 @@ void ProcessWrapper::TouchEntries(const common::file_system::ascii_directory_str
 void ProcessWrapper::HandleEntries(const common::file_system::ascii_directory_string_path& path,
                                    const std::vector<Entry>& entries) {
   CHECK(loop_->IsLoopThread());
-  INFO_LOG() << "Handle entries count: " << entries.size();
+
+  std::string table_name = path.GetFolderName();
+  INFO_LOG() << "Handle entries count: " << entries.size() << ", table: " << table_name;
 
   SnifferDB* node = nullptr;
-  std::string table_name = path.GetFolderName();
   if (!db_->FindNode(table_name, &node)) {
     return;
   }

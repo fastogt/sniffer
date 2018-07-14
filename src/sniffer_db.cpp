@@ -24,21 +24,24 @@
 
 #define USE_KEYSPACE_QUERY "USE examples;"
 
-#define CREATE_TABLE_QUERY_1S \
-  "CREATE TABLE IF NOT EXISTS %s (mac_address text, date timestamp, primary key (mac_address, date));"
+#define CREATE_TABLE_QUERY_1S                                                                                      \
+  "CREATE TABLE IF NOT EXISTS %s (mac_address text, date timestamp, ssi tinyint, primary key (mac_address, date, " \
+  "ssi));"
 
-#define SELECT_ALL_QUERY_1S "SELECT mac_address, date FROM %s"
+#define SELECT_ALL_QUERY_1S "SELECT mac_address, date, ssi FROM %s"
 
-#define INSERT_QUERY_1S "INSERT INTO %s (mac_address, date) VALUES (?, ?)"
+#define INSERT_QUERY_1S "INSERT INTO %s (mac_address, date, ssi) VALUES (?, ?, ?)"
 
 namespace sniffer {
 
 namespace {
 void init_insert(const Entry& entry, CassStatement* statement) {
   CassError err = cass_statement_bind_string(statement, 0, entry.mac_address.c_str());
-  DCHECK(err == CASS_OK);
+  DCHECK(err == CASS_OK) << "error: " << err;
   err = cass_statement_bind_int64(statement, 1, entry.timestamp);
-  DCHECK(err == CASS_OK);
+  DCHECK(err == CASS_OK) << "error: " << err;
+  err = cass_statement_bind_int8(statement, 2, entry.ssi);
+  DCHECK(err == CASS_OK) << "error: " << err;
 }
 }
 
@@ -113,7 +116,7 @@ common::Error SnifferDB::Disconnect() {
 
 common::Error SnifferDB::Insert(const Entry& entry) {
   auto prep_stat_cb = [entry](CassStatement* statement) { init_insert(entry, statement); };
-  common::Error err = connection_->Execute(insert_query_, 2, prep_stat_cb);
+  common::Error err = connection_->Execute(insert_query_, 3, prep_stat_cb);
   if (err) {
     return err;
   }
@@ -122,20 +125,28 @@ common::Error SnifferDB::Insert(const Entry& entry) {
 }
 
 common::Error SnifferDB::Insert(const std::vector<Entry>& entries) {
+#if 1
   auto prep_batch_cb = [this, entries](CassBatch* batch) {
     for (size_t i = 0; i < entries.size(); ++i) {
-      CassStatement* statement = cass_statement_new(insert_query_.c_str(), 2);
+      CassStatement* statement = cass_statement_new(insert_query_.c_str(), 3);
       init_insert(entries[i], statement);
       cass_batch_add_statement(batch, statement);
       cass_statement_free(statement);
     }
   };
+
   common::Error err = connection_->ExecuteBatch(prep_batch_cb);
   if (err) {
     return err;
   }
 
   return common::Error();
+#else
+  for (size_t i = 0; i < entries.size(); ++i) {
+    Insert(entries[i]);
+  }
+  return common::Error();
+#endif
 }
 
 std::string SnifferDB::GetTableName() const {

@@ -21,9 +21,10 @@
 namespace sniffer {
 
 struct Entry {
-  explicit Entry(const std::string& mac_address, common::time64_t ts);
+  explicit Entry(const std::string& mac_address, common::time64_t ts, int8_t ssi);
 
   std::string mac_address;
   common::time64_t timestamp;
+  int8_t ssi;
 };
 }

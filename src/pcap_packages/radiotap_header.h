@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#include <netinet/ether.h>
+
 #include "radiotap.h"
 
 #define PACKED_ATTRIBUTE __attribute__((packed))
@@ -15,6 +17,8 @@ struct PACKED_ATTRIBUTE radiotap_header {
   uint8_t wt_ssi_signal;
   uint8_t wt_reserved_2;
 };
+
+enum TYPE { TYPE_MNGMT = 0, TYPE_CNTRL = 1, TYPE_DATA = 2 };
 
 struct PACKED_ATTRIBUTE ieee80211header {
   /** 7.1.3.1 Frame Control Field */
@@ -35,12 +39,16 @@ struct PACKED_ATTRIBUTE ieee80211header {
   /** 7.1.3.2 Duration/ID field. Content varies with frame type and subtype. */
   uint16_t duration_id;
   /** 7.1.3.3 Address fields. For this program we always assume 3 addresses. */
-  uint8_t addr1[6];
-  uint8_t addr2[6];
-  uint8_t addr3[6];
+  uint8_t addr1[ETH_ALEN];
+  uint8_t addr2[ETH_ALEN];
+  uint8_t addr3[ETH_ALEN];
   /** 7.1.3.4 Sequence Control Field */
   struct PACKED_ATTRIBUTE sequence {
     uint8_t fragnum : 4;
     uint16_t seqnum : 12;
   } sequence;
 };
+
+static inline bool ieee80211_dataqos(const ieee80211header* hdr) {
+  return hdr->fc.type == TYPE_DATA && hdr->fc.subtype >= 8 && hdr->fc.subtype <= 12;
+}
