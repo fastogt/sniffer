@@ -14,6 +14,8 @@
 
 #include "sniffer_db.h"
 
+#include <common/sprintf.h>
+
 #include "database/connection.h"
 
 #define CREATE_KEYSPACE_QUERY                                                                                         \
@@ -22,12 +24,12 @@
 
 #define USE_KEYSPACE_QUERY "USE examples;"
 
-#define CREATE_TABLE_QUERY \
-  "CREATE TABLE IF NOT EXISTS test (mac_address text, date timestamp, primary key (mac_address, date));"
+#define CREATE_TABLE_QUERY_1S \
+  "CREATE TABLE IF NOT EXISTS %s (mac_address text, date timestamp, primary key (mac_address, date));"
 
-#define SELECT_ALL_QUERY "SELECT mac_address, date FROM test"
+#define SELECT_ALL_QUERY_1S "SELECT mac_address, date FROM %s"
 
-#define INSERT_QUERY "INSERT INTO test (mac_address, date) VALUES (?, ?)"
+#define INSERT_QUERY_1S "INSERT INTO %s (mac_address, date) VALUES (?, ?)"
 
 namespace sniffer {
 
@@ -40,9 +42,11 @@ void init_insert(const Entry& entry, CassStatement* statement) {
 }
 }
 
-Entry::Entry(const std::string& mac, common::time64_t ts) : mac_address(mac), timestamp(ts) {}
-
-SnifferDB::SnifferDB() : connection_(new database::Connection) {}
+SnifferDB::SnifferDB(const std::string& table_name)
+    : connection_(new database::Connection),
+      table_name_(table_name),
+      create_table_query_(common::MemSPrintf(CREATE_TABLE_QUERY_1S, table_name)),
+      insert_query_(common::MemSPrintf(INSERT_QUERY_1S, table_name)) {}
 
 SnifferDB::~SnifferDB() {
   delete connection_;
@@ -67,7 +71,7 @@ common::Error SnifferDB::Connect(const std::string& hosts) {
     return err;
   }
 
-  err = connection_->Execute(CREATE_TABLE_QUERY, 0);
+  err = connection_->Execute(create_table_query_, 0);
   if (err) {
     connection_->Disconnect();
     return err;
@@ -94,7 +98,7 @@ common::Error SnifferDB::Connect(const std::vector<std::string>& hosts) {
     return err;
   }
 
-  err = connection_->Execute(CREATE_TABLE_QUERY, 0);
+  err = connection_->Execute(create_table_query_, 0);
   if (err) {
     connection_->Disconnect();
     return err;
@@ -109,7 +113,7 @@ common::Error SnifferDB::Disconnect() {
 
 common::Error SnifferDB::Insert(const Entry& entry) {
   auto prep_stat_cb = [entry](CassStatement* statement) { init_insert(entry, statement); };
-  common::Error err = connection_->Execute(INSERT_QUERY, 2, prep_stat_cb);
+  common::Error err = connection_->Execute(insert_query_, 2, prep_stat_cb);
   if (err) {
     return err;
   }
@@ -118,9 +122,9 @@ common::Error SnifferDB::Insert(const Entry& entry) {
 }
 
 common::Error SnifferDB::Insert(const std::vector<Entry>& entries) {
-  auto prep_batch_cb = [entries](CassBatch* batch) {
+  auto prep_batch_cb = [this, entries](CassBatch* batch) {
     for (size_t i = 0; i < entries.size(); ++i) {
-      CassStatement* statement = cass_statement_new(INSERT_QUERY, 2);
+      CassStatement* statement = cass_statement_new(insert_query_.c_str(), 2);
       init_insert(entries[i], statement);
       cass_batch_add_statement(batch, statement);
       cass_statement_free(statement);
@@ -132,5 +136,9 @@ common::Error SnifferDB::Insert(const std::vector<Entry>& entries) {
   }
 
   return common::Error();
+}
+
+std::string SnifferDB::GetTableName() const {
+  return table_name_;
 }
 }

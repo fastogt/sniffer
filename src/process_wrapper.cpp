@@ -35,6 +35,7 @@ extern "C" {
 #include "commands_info/stop_service_info.h"
 
 #include "folder_change_reader.h"
+#include "database_holder.h"
 
 #include "pcaper.h"
 
@@ -53,8 +54,8 @@ ProcessWrapper::ProcessWrapper(const std::string& license_key)
       ping_client_id_timer_(INVALID_TIMER_ID),
       cleanup_timer_(INVALID_TIMER_ID),
       watcher_(nullptr),
+      db_(nullptr),
       id_(),
-      db_(),
       thread_pool_(),
       license_key_(license_key) {
   loop_ = new DaemonServer(GetServerHostAndPort(), this);
@@ -69,18 +70,7 @@ ProcessWrapper::~ProcessWrapper() {
 int ProcessWrapper::Exec(int argc, char** argv) {
   UNUSED(argc);
   UNUSED(argv);
-
-  int res = EXIT_FAILURE;
-  common::Error err = db_.Connect(config_.server.db_hosts);
-  if (err) {
-    DEBUG_MSG_ERROR(err, common::logging::LOG_LEVEL_ERR);
-    goto finished;
-  }
-
-  res = loop_->Exec();
-finished:
-  db_.Disconnect();
-  return res;
+  return loop_->Exec();
 }
 
 int ProcessWrapper::SendStopDaemonRequest(const std::string& license_key) {
@@ -118,9 +108,19 @@ void ProcessWrapper::PreLooped(common::libev::IoLoop* server) {
     return;
   }
 
+  db_ = new DatabaseHolder;
   watcher_ = new FolderChangeReader(loop_, inode_fd);
   for (size_t i = 0; i < config_.server.scaning_paths.size(); ++i) {
-    watcher_->AddDirWatcher(config_.server.scaning_paths[i], IN_CLOSE_WRITE);
+    common::file_system::ascii_directory_string_path folder_path = config_.server.scaning_paths[i];
+    common::Error err = watcher_->AddDirWatcher(folder_path, IN_CLOSE_WRITE);
+    if (err) {
+      DEBUG_MSG_ERROR(err, common::logging::LOG_LEVEL_ERR);
+    }
+
+    err = db_->AttachNode(folder_path.GetFolderName(), config_.server.db_hosts);
+    if (err) {
+      DEBUG_MSG_ERROR(err, common::logging::LOG_LEVEL_ERR);
+    }
   }
   server->RegisterClient(watcher_);
 
@@ -212,13 +212,15 @@ void ProcessWrapper::PostLooped(common::libev::IoLoop* server) {
     ping_client_id_timer_ = INVALID_TIMER_ID;
   }
 
-  db_.Disconnect();
+  thread_pool_.Stop();
 
   watcher_->Close();
   delete watcher_;
   watcher_ = nullptr;
 
-  thread_pool_.Stop();
+  db_->Clean();
+  delete db_;
+  db_ = nullptr;
 }
 
 void ProcessWrapper::ReadConfig(const common::file_system::ascii_file_string_path& config_path) {
@@ -291,7 +293,7 @@ void ProcessWrapper::HandlePcapFile(const common::file_system::ascii_file_string
     }
 
     std::vector<Entry> entries;
-    auto parse_cb = [ts_file, &entries](const unsigned char* packet, const pcap_pkthdr& header) {
+    auto parse_cb = [path, ts_file, &entries](const unsigned char* packet, const pcap_pkthdr& header) {
       bpf_u_int32 packet_len = header.caplen;
       if (packet_len < sizeof(struct radiotap_header)) {
         return;
@@ -316,21 +318,30 @@ void ProcessWrapper::HandlePcapFile(const common::file_system::ascii_file_string
 
     pcap.Parse(parse_cb);
     pcap.Close();
-    TouchEntries(entries);
+    common::file_system::ascii_directory_string_path dir(path.GetDirectory());
+    TouchEntries(dir, entries);
   };
 
   thread_pool_.Post(pcap_task);
 }
 
-void ProcessWrapper::TouchEntries(const std::vector<Entry>& entries) {
-  loop_->ExecInLoopThread([this, entries]() { HandleEntries(entries); });
+void ProcessWrapper::TouchEntries(const common::file_system::ascii_directory_string_path& path,
+                                  const std::vector<Entry>& entries) {
+  loop_->ExecInLoopThread([this, path, entries]() { HandleEntries(path, entries); });
 }
 
-void ProcessWrapper::HandleEntries(const std::vector<Entry>& entries) {
+void ProcessWrapper::HandleEntries(const common::file_system::ascii_directory_string_path& path,
+                                   const std::vector<Entry>& entries) {
   CHECK(loop_->IsLoopThread());
   INFO_LOG() << "Handle entries count: " << entries.size();
 
-  common::Error err = db_.Insert(entries);
+  SnifferDB* node = nullptr;
+  std::string table_name = path.GetFolderName();
+  if (!db_->FindNode(table_name, &node)) {
+    return;
+  }
+
+  common::Error err = node->Insert(entries);
   if (err) {
     DEBUG_MSG_ERROR(err, common::logging::LOG_LEVEL_ERR);
   }

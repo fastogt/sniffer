@@ -11,6 +11,8 @@ SET(GLOBAL_HEADERS
   ${CMAKE_CURRENT_SOURCE_DIR}/folder_change_reader.h
   ${CMAKE_CURRENT_SOURCE_DIR}/pcaper.h
   ${CMAKE_CURRENT_SOURCE_DIR}/thread_pool.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/database_holder.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/entry.h
 )
 SET(GLOBAL_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/sniffer_db.cpp
@@ -22,6 +24,8 @@ SET(GLOBAL_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/folder_change_reader.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/pcaper.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/thread_pool.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/database_holder.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/entry.cpp
 )
 
 SET(PROTOCOL_HEADERS

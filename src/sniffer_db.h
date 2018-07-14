@@ -17,21 +17,16 @@
 #include <common/error.h>
 #include <common/types.h>
 
+#include "entry.h"
+
 namespace sniffer {
 namespace database {
 class Connection;
 }
 
-struct Entry {
-  explicit Entry(const std::string& mac_address, common::time64_t ts);
-
-  std::string mac_address;
-  common::time64_t timestamp;
-};
-
 class SnifferDB {
  public:
-  SnifferDB();
+  explicit SnifferDB(const std::string& table_name);
   ~SnifferDB();
 
   common::Error Connect(const std::string& hosts) WARN_UNUSED_RESULT;               // 127.0.0.1,127.0.0.1
@@ -41,7 +36,13 @@ class SnifferDB {
   common::Error Insert(const Entry& entry) WARN_UNUSED_RESULT;
   common::Error Insert(const std::vector<Entry>& entries) WARN_UNUSED_RESULT;
 
+  std::string GetTableName() const;
+
  private:
   database::Connection* connection_;
+  const std::string table_name_;
+
+  const std::string create_table_query_;
+  const std::string insert_query_;
 };
 }

@@ -18,15 +18,16 @@
 
 #include <common/libev/io_loop_observer.h>
 
-#include "config.h"
-
 #include "protocol/types.h"
-#include "sniffer_db.h"
+
+#include "config.h"
 #include "thread_pool.h"
+#include "entry.h"
 
 namespace sniffer {
 class DaemonClient;
 class FolderChangeReader;
+class DatabaseHolder;
 
 class ProcessWrapper : public common::libev::IoLoopObserver {
  public:
@@ -68,10 +69,11 @@ class ProcessWrapper : public common::libev::IoLoopObserver {
                                                      char* argv[]) WARN_UNUSED_RESULT;
 
   virtual void HandlePcapFile(const common::file_system::ascii_file_string_path& path);
-  virtual void HandleEntries(const std::vector<Entry>& entries);
+  virtual void HandleEntries(const common::file_system::ascii_directory_string_path& path,
+                             const std::vector<Entry>& entries);
 
  private:
-  void TouchEntries(const std::vector<Entry>& entries);
+  void TouchEntries(const common::file_system::ascii_directory_string_path& path, const std::vector<Entry>& entries);
 
   common::Error DaemonDataReceived(DaemonClient* dclient) WARN_UNUSED_RESULT;
   common::Error FolderChanged(FolderChangeReader* fclient) WARN_UNUSED_RESULT;
@@ -92,9 +94,8 @@ class ProcessWrapper : public common::libev::IoLoopObserver {
   common::libev::timer_id_t ping_client_id_timer_;
   common::libev::timer_id_t cleanup_timer_;
   FolderChangeReader* watcher_;
+  DatabaseHolder* db_;
   std::atomic<seq_id_t> id_;
-
-  SnifferDB db_;
 
   ThreadPool thread_pool_;
 

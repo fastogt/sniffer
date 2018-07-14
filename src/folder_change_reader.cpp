@@ -110,8 +110,8 @@ common::Error FolderChangeReader::AddDirWatcher(const common::file_system::ascii
   std::string dir_str = directory.GetPath();
   int watcher_fd = inotify_add_watch(inode_fd_, dir_str.c_str(), mask);
   if (watcher_fd == INVALID_DESCRIPTOR) {
-    common::ErrnoError errn = common::make_errno_error(errno);
-    return common::make_error_from_errno(errn);
+    std::string err_str = common::MemSPrintf("Failed to watch path: %s, error: %d", dir_str, errno);
+    return common::make_error(err_str);
   }
 
   watchers_.push_back({directory, watcher_fd});
