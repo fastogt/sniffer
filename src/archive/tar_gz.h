@@ -14,33 +14,27 @@
 
 #pragma once
 
-#include <pcap.h>
-
-#include <functional>
-
 #include <common/error.h>
-#include <common/file_system/file.h>
 #include <common/file_system/path.h>
 
+#include <zlib.h>
+
 namespace sniffer {
+namespace archive {
 
-class Pcaper {
+class TarGZ {
  public:
-  typedef common::file_system::ascii_string_path path_type;
-  typedef std::function<void(const unsigned char*, const pcap_pkthdr&)> pcap_parse_function_t;
+  typedef common::file_system::ascii_string_path path_t;
 
-  Pcaper();
-  ~Pcaper();
+  TarGZ();
+  ~TarGZ();
 
-  common::Error Open(const path_type& file_path) WARN_UNUSED_RESULT;
-  void Parse(pcap_parse_function_t parse_cb);
+  common::Error Open(const path_t& path, const char* mode) WARN_UNUSED_RESULT;
+  common::Error Write(const common::buffer_t& data) WARN_UNUSED_RESULT;
   common::Error Close() WARN_UNUSED_RESULT;
 
-  path_type GetPath() const;
-
  private:
-  DISALLOW_COPY_AND_ASSIGN(Pcaper);
-  path_type file_path_;
-  pcap_t* pcap_;
+  gzFile file_;
 };
+}
 }

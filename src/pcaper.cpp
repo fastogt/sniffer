@@ -22,25 +22,25 @@ Pcaper::Pcaper() : file_path_(), pcap_(NULL) {}
 
 Pcaper::~Pcaper() {}
 
-common::ErrnoError Pcaper::Open(const Pcaper::path_type& file_path) {
+common::Error Pcaper::Open(const Pcaper::path_type& file_path) {
   if (!file_path.IsValid()) {
-    return common::make_errno_error_inval();
+    return common::make_error_inval();
   }
 
   char errbuf[PCAP_ERRBUF_SIZE];
   const char* device = pcap_lookupdev(errbuf);
   if (device == NULL) {
-    return common::make_errno_error(common::MemSPrintf("Couldn't find default device: %s", errbuf), EACCES);
+    return common::make_error(common::MemSPrintf("Couldn't find default device: %s", errbuf));
   }
 
   std::string path = file_path.GetPath();
   pcap_ = pcap_open_offline_with_tstamp_precision(path.c_str(), PCAP_TSTAMP_PRECISION_MICRO, errbuf);
   if (!pcap_) {
-    return common::make_errno_error(common::MemSPrintf("error reading pcap file: %s", errbuf), EACCES);
+    return common::make_error(common::MemSPrintf("error reading pcap file: %s", errbuf));
   }
 
   file_path_ = file_path;
-  return common::ErrnoError();
+  return common::Error();
 }
 
 void Pcaper::Parse(pcap_parse_function_t parse_cb) {
@@ -55,14 +55,14 @@ void Pcaper::Parse(pcap_parse_function_t parse_cb) {
   }
 }
 
-common::ErrnoError Pcaper::Close() {
+common::Error Pcaper::Close() {
   if (pcap_) {
     pcap_close(pcap_);
   }
   pcap_ = NULL;
 
   file_path_ = path_type();
-  return common::ErrnoError();
+  return common::Error();
 }
 
 Pcaper::path_type Pcaper::GetPath() const {

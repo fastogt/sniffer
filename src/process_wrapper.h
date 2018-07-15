@@ -68,7 +68,8 @@ class ProcessWrapper : public common::libev::IoLoopObserver {
                                                      int argc,
                                                      char* argv[]) WARN_UNUSED_RESULT;
 
-  virtual void HandlePcapFile(const common::file_system::ascii_file_string_path& path);
+  virtual void HandlePcapFile(const common::file_system::ascii_directory_string_path& node,
+                              const common::file_system::ascii_file_string_path& path);
   virtual void HandleEntries(const common::file_system::ascii_directory_string_path& path,
                              const std::vector<Entry>& entries);
 

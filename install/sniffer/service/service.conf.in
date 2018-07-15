@@ -2,3 +2,4 @@
 id=localhost
 db_host=127.0.0.1
 scaning_paths=~/@SERVICE_NAME@
+archive_path=~/@SERVICE_NAME@/archive

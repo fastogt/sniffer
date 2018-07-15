@@ -29,10 +29,12 @@
 #define CONFIG_SERVER_OPTIONS_ID_FIELD "id"
 #define CONFIG_SERVER_OPTIONS_DB_HOSTS_FIELD "db_hosts"
 #define CONFIG_SERVER_OPTIONS_SCANING_PATH_FIELD "scaning_paths"
+#define CONFIG_SERVER_OPTIONS_ARCHIVE_PATH_FIELD "archive_path"
 
 #define DEFAULT_ID_FIELD_VALUE "localhost"
 #define DEFAULT_DB_HOSTS_FIELD_VALUE "127.0.0.1"
 #define DEFAULT_SCANING_PATH_FIELD_VALUE "~/" SERVICE_NAME
+#define DEFAULT_ARCHIVE_PATH_FIELD_VALUE "~/" SERVICE_NAME "/archive"
 
 /*
   [server]
@@ -68,6 +70,9 @@ int ini_handler_fasto(void* user_data, const char* section, const char* name, co
       pconfig->server.scaning_paths = dir_result;
     }
     return 1;
+  } else if (MATCH_FIELD(CONFIG_SERVER_OPTIONS, CONFIG_SERVER_OPTIONS_ARCHIVE_PATH_FIELD)) {
+    pconfig->server.archive_path = common::file_system::ascii_directory_string_path(value);
+    return 1;
   } else {
     return 0; /* unknown section/name, error */
   }
@@ -77,7 +82,8 @@ int ini_handler_fasto(void* user_data, const char* section, const char* name, co
 ServerSettings::ServerSettings()
     : id(DEFAULT_ID_FIELD_VALUE),
       db_hosts{DEFAULT_DB_HOSTS_FIELD_VALUE},
-      scaning_paths{common::file_system::ascii_directory_string_path(DEFAULT_SCANING_PATH_FIELD_VALUE)} {}
+      scaning_paths{common::file_system::ascii_directory_string_path(DEFAULT_SCANING_PATH_FIELD_VALUE)},
+      archive_path(DEFAULT_ARCHIVE_PATH_FIELD_VALUE) {}
 
 Config::Config() : server() {}
 
@@ -96,6 +102,7 @@ common::Error save_config_file(const common::file_system::ascii_file_string_path
     return common::make_error_inval();
   }
 
+  NOTREACHED() << "Not implemeted.";
   return common::Error();
 }
 }

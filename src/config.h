@@ -29,6 +29,7 @@ struct ServerSettings {
   std::string id;
   std::vector<std::string> db_hosts;
   std::vector<common::file_system::ascii_directory_string_path> scaning_paths;
+  common::file_system::ascii_directory_string_path archive_path;
 };
 
 struct Config {

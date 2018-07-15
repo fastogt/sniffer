@@ -23,6 +23,7 @@
 #include <common/convert2string.h>
 #include <common/net/net.h>
 #include <common/file_system/file_system.h>
+#include <common/file_system/string_path_utils.h>
 
 extern "C" {
 #include "sds_fasto.h"  // for sdsfreesplitres, sds
@@ -38,6 +39,8 @@ extern "C" {
 #include "folder_change_reader.h"
 #include "database_holder.h"
 
+#include "archive/tar_gz.h"
+
 #include "pcaper.h"
 
 #include "pcap_packages/radiotap_header.h"
@@ -47,9 +50,42 @@ extern "C" {
 #define EVENT_SIZE (sizeof(struct inotify_event))
 #define BUF_LEN (1024 * (EVENT_SIZE + 16))
 
+#define ARCHIVE_EXTENSION ".gz"
+
 static const unsigned char BROADCAST_MAC[ETH_ALEN] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 namespace sniffer {
+
+namespace {
+common::Error MakeArchive(const common::file_system::ascii_file_string_path& file_path,
+                          const common::file_system::ascii_file_string_path& archive_path) {
+  if (!file_path.IsValid() || !archive_path.IsValid()) {
+    return common::make_error_inval();
+  }
+
+  archive::TarGZ tr;
+  common::Error err = tr.Open(archive_path, "wb");
+  if (err) {
+    return err;
+  }
+
+  common::file_system::ANSIFile fl;
+  common::ErrnoError errn = fl.Open(file_path, "rb");
+  if (errn) {
+    tr.Close();
+    return common::make_error_from_errno(errn);
+  }
+
+  common::buffer_t buff;
+  while (fl.Read(&buff, 8192)) {
+    tr.Write(buff);
+  }
+
+  fl.Close();
+  tr.Close();
+  return common::Error();
+}
+}
 
 ProcessWrapper::ProcessWrapper(const std::string& license_key)
     : config_(),
@@ -266,7 +302,7 @@ common::Error ProcessWrapper::FolderChanged(FolderChangeReader* fclient) {
             std::string file_name = event->name;
             auto path = watcher->directory.MakeFileStringPath(file_name);
             if (path) {
-              HandlePcapFile(*path);
+              HandlePcapFile(watcher->directory, *path);
             }
           }
         }
@@ -278,11 +314,12 @@ common::Error ProcessWrapper::FolderChanged(FolderChangeReader* fclient) {
   return common::Error();
 }
 
-void ProcessWrapper::HandlePcapFile(const common::file_system::ascii_file_string_path& path) {
+void ProcessWrapper::HandlePcapFile(const common::file_system::ascii_directory_string_path& node,
+                                    const common::file_system::ascii_file_string_path& path) {
   CHECK(loop_->IsLoopThread());
 
   INFO_LOG() << "Handle pcap file path: " << path.GetPath();
-  auto pcap_task = [path, this]() {
+  auto pcap_task = [node, path, this]() {
     std::string file_name = path.GetBaseFileName();
     // YYYY-MM-DD_HH:MM:SS
     struct tm tm;
@@ -294,8 +331,8 @@ void ProcessWrapper::HandlePcapFile(const common::file_system::ascii_file_string
 
     common::utctime_t ts_file = common::time::tm2utctime(&tm);
     Pcaper pcap;
-    common::ErrnoError errn = pcap.Open(path);
-    if (errn) {
+    common::Error err = pcap.Open(path);
+    if (err) {
       return;
     }
 
@@ -326,16 +363,44 @@ void ProcessWrapper::HandlePcapFile(const common::file_system::ascii_file_string
       std::string destination_mac = ether_ntoa((struct ether_addr*)beac->addr3);
       struct timeval tv = header.ts;
       common::utctime_t ts_cap = ts_file + tv.tv_sec;
-      Entry ent(receiver_mac, ts_cap * 1000, radio->wt_ssi_signal); // timestamp in msec
+      Entry ent(receiver_mac, ts_cap * 1000, radio->wt_ssi_signal);  // timestamp in msec
       entries.push_back(ent);
       pcap_pos++;
     };
 
     pcap.Parse(parse_cb);
     pcap.Close();
-    common::file_system::ascii_directory_string_path dir(path.GetDirectory());
-    TouchEntries(dir, entries);
-    errn = common::file_system::remove_file(path.GetPath());
+    TouchEntries(node, entries);
+
+    // archive file
+    std::string table_name = node.GetFolderName();
+    auto path_to_folder = config_.server.archive_path.MakeDirectoryStringPath(table_name);
+    if (path_to_folder) {
+      common::file_system::ascii_directory_string_path archive_dir = *path_to_folder;
+      std::string archive_dir_str = archive_dir.GetPath();
+      bool is_exist_archive_dir = common::file_system::is_directory_exist(archive_dir_str);
+      if (!is_exist_archive_dir) {
+        common::ErrnoError errn = common::file_system::create_directory(archive_dir_str, true);
+        if (errn) {
+          DEBUG_MSG_ERROR(errn, common::logging::LOG_LEVEL_WARNING);
+        } else {
+          is_exist_archive_dir = true;
+        }
+      }
+
+      if (is_exist_archive_dir) {
+        auto path_to = archive_dir.MakeFileStringPath(path.GetBaseFileName() + ARCHIVE_EXTENSION);
+        err = MakeArchive(path, *path_to);
+        if (err) {
+          DEBUG_MSG_ERROR(err, common::logging::LOG_LEVEL_WARNING);
+        }
+      }
+    } else {
+      // Can't generate archive folder
+    }
+
+    // remove file
+    common::ErrnoError errn = common::file_system::remove_file(path.GetPath());
     if (errn) {
       DEBUG_MSG_ERROR(errn, common::logging::LOG_LEVEL_WARNING);
     }
