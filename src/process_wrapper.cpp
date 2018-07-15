@@ -284,11 +284,15 @@ void ProcessWrapper::HandlePcapFile(const common::file_system::ascii_file_string
   INFO_LOG() << "Handle pcap file path: " << path.GetPath();
   auto pcap_task = [path, this]() {
     std::string file_name = path.GetBaseFileName();
-    common::time64_t ts_file;
-    if (!common::ConvertFromString(file_name, &ts_file)) {
+    // YYYY-MM-DD_HH:MM:SS
+    struct tm tm;
+    memset(&tm, 0, sizeof(struct tm));
+    char* res = strptime(file_name.c_str(), "%Y-%m-%d_%H:%M:%S", &tm);
+    if (!res) {
       return;
     }
 
+    common::utctime_t ts_file = common::time::tm2utctime(&tm);
     Pcaper pcap;
     common::ErrnoError errn = pcap.Open(path);
     if (errn) {
@@ -321,8 +325,8 @@ void ProcessWrapper::HandlePcapFile(const common::file_system::ascii_file_string
       std::string transmit_mac = ether_ntoa((struct ether_addr*)beac->addr2);
       std::string destination_mac = ether_ntoa((struct ether_addr*)beac->addr3);
       struct timeval tv = header.ts;
-      common::time64_t ts = common::time::timeval2mstime(&tv);
-      Entry ent(receiver_mac, ts_file * 1000 + ts, radio->wt_ssi_signal);
+      common::utctime_t ts_cap = ts_file + tv.tv_sec;
+      Entry ent(receiver_mac, ts_cap * 1000, radio->wt_ssi_signal); // timestamp in msec
       entries.push_back(ent);
       pcap_pos++;
     };
