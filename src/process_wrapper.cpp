@@ -52,7 +52,26 @@ extern "C" {
 
 #define ARCHIVE_EXTENSION ".gz"
 
-static const unsigned char BROADCAST_MAC[ETH_ALEN] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+#define SIZE_OF_MAC_ADDRESS ETH_ALEN
+#define BROADCAST_MAC \
+  { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }
+
+namespace {
+
+typedef unsigned char mac_address_t[SIZE_OF_MAC_ADDRESS];
+
+const std::array<mac_address_t, 1> g_filtered_macs = {{BROADCAST_MAC}};
+
+bool need_to_skipped_mac(mac_address_t mac) {
+  for (size_t i = 0; i < g_filtered_macs.size(); ++i) {
+    if (memcmp(g_filtered_macs[i], mac, SIZE_OF_MAC_ADDRESS) == 0) {
+      return true;
+    }
+  }
+
+  return false;
+}
+}
 
 namespace sniffer {
 
@@ -338,7 +357,8 @@ void ProcessWrapper::HandlePcapFile(const common::file_system::ascii_directory_s
 
     std::vector<Entry> entries;
     size_t pcap_pos = 0;
-    auto parse_cb = [path, ts_file, &entries, &pcap_pos](const unsigned char* packet, const pcap_pkthdr& header) {
+    size_t skipped_count = 0;
+    auto parse_cb = [path, ts_file, &entries, &pcap_pos, &skipped_count](const unsigned char* packet, const pcap_pkthdr& header) {
       bpf_u_int32 packet_len = header.caplen;
       if (packet_len < sizeof(struct radiotap_header)) {
         pcap_pos++;
@@ -356,6 +376,12 @@ void ProcessWrapper::HandlePcapFile(const common::file_system::ascii_directory_s
       // beacon
       struct ieee80211header* beac = (struct ieee80211header*)packet;
       if (ieee80211_dataqos(beac)) {
+      }
+
+      if (need_to_skipped_mac(beac->addr1)) {
+        skipped_count++;
+        pcap_pos++;
+        return;
       }
 
       std::string receiver_mac = ether_ntoa((struct ether_addr*)beac->addr1);
