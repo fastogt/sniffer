@@ -2,11 +2,11 @@ SET(CLIENT_NAME ${PROJECT_NAME}_client)
 SET(CLIENT_NAME_EXE ${CLIENT_NAME}_s)
 
 SET(GLOBAL_HEADERS
-  ${CMAKE_CURRENT_SOURCE_DIR}/process_wrapper.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/sniffer_service.h
   ${CMAKE_CURRENT_SOURCE_DIR}/config.h
 )
 SET(GLOBAL_SOURCES
-  ${CMAKE_CURRENT_SOURCE_DIR}/process_wrapper.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/sniffer_service.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/config.cpp
 )
 

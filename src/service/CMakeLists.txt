@@ -3,7 +3,7 @@ SET(SERVICE_NAME_EXE ${SERVICE_NAME}_s)
 
 SET(GLOBAL_HEADERS
   ${CMAKE_CURRENT_SOURCE_DIR}/sniffer_db.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/process_wrapper.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/master_service.h
   ${CMAKE_CURRENT_SOURCE_DIR}/config.h
   ${CMAKE_CURRENT_SOURCE_DIR}/folder_change_reader.h
   ${CMAKE_CURRENT_SOURCE_DIR}/pcaper.h
@@ -12,7 +12,7 @@ SET(GLOBAL_HEADERS
 )
 SET(GLOBAL_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/sniffer_db.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/process_wrapper.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/master_service.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/config.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/folder_change_reader.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/pcaper.cpp

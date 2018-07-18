@@ -14,14 +14,10 @@
 
 #include "process_wrapper.h"
 
-#include <sys/inotify.h>
-#include <netinet/ether.h>
-
 #include <stdlib.h>
 
 #include <common/sys_byteorder.h>
 #include <common/convert2string.h>
-#include <common/net/net.h>
 
 extern "C" {
 #include "sds_fasto.h"  // for sdsfreesplitres, sds
@@ -34,42 +30,17 @@ extern "C" {
 #include "commands_info/activate_info.h"
 #include "commands_info/stop_service_info.h"
 
-#define CLIENT_PORT 6317
-
-#define SIZE_OF_MAC_ADDRESS ETH_ALEN
-#define BROADCAST_MAC \
-  { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }
-
-namespace {
-
-typedef unsigned char mac_address_t[SIZE_OF_MAC_ADDRESS];
-
-const std::array<mac_address_t, 1> g_filtered_macs = {{BROADCAST_MAC}};
-
-bool need_to_skipped_mac(mac_address_t mac) {
-  for (size_t i = 0; i < g_filtered_macs.size(); ++i) {
-    if (memcmp(g_filtered_macs[i], mac, SIZE_OF_MAC_ADDRESS) == 0) {
-      return true;
-    }
-  }
-
-  return false;
-}
-}
-
 namespace sniffer {
-namespace client {
 
-ProcessWrapper::ProcessWrapper(const std::string& license_key)
-    : config_(),
-      loop_(nullptr),
+ProcessWrapper::ProcessWrapper(const std::string& service_name,
+                               const common::net::HostAndPort& service_host,
+                               const std::string& license_key)
+    : loop_(nullptr),
       ping_client_id_timer_(INVALID_TIMER_ID),
-      cleanup_timer_(INVALID_TIMER_ID),
       id_(),
       license_key_(license_key) {
-  loop_ = new daemon_client::DaemonServer(GetServerHostAndPort(), this);
-  loop_->SetName("back_end_server");
-  ReadConfig(GetConfigPath());
+  loop_ = new daemon_client::DaemonServer(service_host, this);
+  loop_->SetName(service_name);
 }
 
 ProcessWrapper::~ProcessWrapper() {
@@ -82,7 +53,8 @@ int ProcessWrapper::Exec(int argc, char** argv) {
   return loop_->Exec();
 }
 
-int ProcessWrapper::SendStopDaemonRequest(const std::string& license_key) {
+int ProcessWrapper::SendStopDaemonRequest(const std::string& license_key,
+                                          const common::net::HostAndPort& service_host) {
   commands_info::StopServiceInfo stop_req(license_key);
   std::string stop_str;
   common::Error serialize_error = stop_req.SerializeToString(&stop_str);
@@ -91,9 +63,8 @@ int ProcessWrapper::SendStopDaemonRequest(const std::string& license_key) {
   }
 
   protocol::request_t req = daemon_client::StopServiceRequest("0", stop_str);
-  common::net::HostAndPort host = GetServerHostAndPort();
   common::net::socket_info client_info;
-  common::ErrnoError err = common::net::connect(host, common::net::ST_SOCK_STREAM, 0, &client_info);
+  common::ErrnoError err = common::net::connect(service_host, common::net::ST_SOCK_STREAM, 0, &client_info);
   if (err) {
     return EXIT_FAILURE;
   }
@@ -103,10 +74,6 @@ int ProcessWrapper::SendStopDaemonRequest(const std::string& license_key) {
   connection->Close();
   delete connection;
   return EXIT_SUCCESS;
-}
-
-common::file_system::ascii_file_string_path ProcessWrapper::GetConfigPath() {
-  return common::file_system::ascii_file_string_path(CONFIG_FILE_PATH);
 }
 
 void ProcessWrapper::PreLooped(common::libev::IoLoop* server) {
@@ -147,8 +114,6 @@ void ProcessWrapper::TimerEmited(common::libev::IoLoop* server, common::libev::t
         }
       }
     }
-  } else if (cleanup_timer_ == id) {
-    loop_->Stop();
   }
 }
 
@@ -176,8 +141,6 @@ void ProcessWrapper::DataReceived(common::libev::IoClient* client) {
       dclient->Close();
       delete dclient;
     }
-  } else {
-    NOTREACHED();
   }
 }
 
@@ -190,17 +153,6 @@ void ProcessWrapper::PostLooped(common::libev::IoLoop* server) {
     server->RemoveTimer(ping_client_id_timer_);
     ping_client_id_timer_ = INVALID_TIMER_ID;
   }
-}
-
-void ProcessWrapper::ReadConfig(const common::file_system::ascii_file_string_path& config_path) {
-  common::Error err = load_config_file(config_path, &config_);
-  if (err) {
-    ERROR_LOG() << "Can't open config file path: " << config_path.GetPath() << ", error: " << err->GetDescription();
-  }
-}
-
-common::net::HostAndPort ProcessWrapper::GetServerHostAndPort() {
-  return common::net::HostAndPort::CreateLocalHost(CLIENT_PORT);
 }
 
 protocol::sequance_id_t ProcessWrapper::NextRequestID() {
@@ -314,20 +266,11 @@ common::Error ProcessWrapper::HandleRequestClientStopService(daemon_client::Daem
       return common::make_error_inval();
     }
 
-    if (cleanup_timer_ != INVALID_TIMER_ID) {
-      // in progress
-      daemon_client::ProtocoledDaemonClient* pdclient = static_cast<daemon_client::ProtocoledDaemonClient*>(dclient);
-      protocol::responce_t resp = daemon_client::StopServiceResponceFail(id, "Stop service in progress...");
-      pdclient->WriteResponce(resp);
-
-      return common::Error();
-    }
-
     daemon_client::ProtocoledDaemonClient* pdclient = static_cast<daemon_client::ProtocoledDaemonClient*>(dclient);
     protocol::responce_t resp = daemon_client::StopServiceResponceSuccess(id);
     pdclient->WriteResponce(resp);
 
-    cleanup_timer_ = loop_->CreateTimer(cleanup_seconds, false);
+    loop_->Stop();
     return common::Error();
   }
 
@@ -364,6 +307,5 @@ common::Error ProcessWrapper::HandleRequestClientActivate(daemon_client::DaemonC
   }
 
   return common::make_error_inval();
-}
 }
 }

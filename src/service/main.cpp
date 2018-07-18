@@ -26,7 +26,7 @@
 #include <common/utils.h>
 #include <common/license/gen_hardware_hash.h>
 
-#include "process_wrapper.h"
+#include "service/master_service.h"
 
 #define HELP_TEXT                          \
   "Usage: " SERVICE_NAME                   \
@@ -84,7 +84,8 @@ int main(int argc, char** argv, char** envp) {
         return EXIT_FAILURE;
       }
 
-      return sniffer::service::ProcessWrapper::SendStopDaemonRequest(license_key);
+      return sniffer::service::MasterService::SendStopDaemonRequest(
+          license_key, sniffer::service::MasterService::GetServerHostAndPort());
     } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
       std::cout << HELP_TEXT << std::endl;
       return EXIT_SUCCESS;
@@ -158,7 +159,7 @@ int main(int argc, char** argv, char** envp) {
     return EXIT_FAILURE;
   }
 
-  sniffer::service::ProcessWrapper wrapper(license_key);
+  sniffer::service::MasterService wrapper(license_key);
   NOTICE_LOG() << "Running " PROJECT_VERSION_HUMAN << " in " << (run_as_daemon ? "daemon" : "common") << " mode";
 
   for (char** env = envp; *env != NULL; env++) {

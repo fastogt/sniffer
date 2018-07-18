@@ -14,31 +14,28 @@
 
 #pragma once
 
-#include <string>
-
 #include <common/libev/io_loop_observer.h>
+#include <common/net/net.h>
 
 #include "protocol/types.h"
-
-#include "config.h"
 
 namespace sniffer {
 namespace daemon_client {
 class DaemonClient;
 }
-namespace client {
 
 class ProcessWrapper : public common::libev::IoLoopObserver {
  public:
   typedef uint64_t seq_id_t;
-  enum { ping_timeout_clients_seconds = 60, cleanup_seconds = 5 };
-  ProcessWrapper(const std::string& license_key);
+  enum { ping_timeout_clients_seconds = 60 };
+  ProcessWrapper(const std::string& service_name,
+                 const common::net::HostAndPort& service_host,
+                 const std::string& license_key);
   virtual ~ProcessWrapper();
 
-  int Exec(int argc, char** argv);
+  virtual int Exec(int argc, char** argv);
 
-  static int SendStopDaemonRequest(const std::string& license_key);
-  static common::file_system::ascii_file_string_path GetConfigPath();
+  static int SendStopDaemonRequest(const std::string& license_key, const common::net::HostAndPort& service_host);
 
  protected:
   virtual void PreLooped(common::libev::IoLoop* server) override;
@@ -67,29 +64,25 @@ class ProcessWrapper : public common::libev::IoLoopObserver {
                                                      int argc,
                                                      char* argv[]) WARN_UNUSED_RESULT;
 
- private:
-  common::Error DaemonDataReceived(daemon_client::DaemonClient* dclient) WARN_UNUSED_RESULT;
-
+ protected:
   protocol::sequance_id_t NextRequestID();
-  common::Error HandleRequestClientActivate(daemon_client::DaemonClient* dclient,
-                                            protocol::sequance_id_t id,
-                                            int argc,
-                                            char* argv[]) WARN_UNUSED_RESULT;
-  common::Error HandleRequestClientStopService(daemon_client::DaemonClient* dclient,
-                                               protocol::sequance_id_t id,
-                                               int argc,
-                                               char* argv[]) WARN_UNUSED_RESULT;
 
-  void ReadConfig(const common::file_system::ascii_file_string_path& config_path);
-  static common::net::HostAndPort GetServerHostAndPort();
+  virtual common::Error DaemonDataReceived(daemon_client::DaemonClient* dclient) WARN_UNUSED_RESULT;
+  virtual common::Error HandleRequestClientActivate(daemon_client::DaemonClient* dclient,
+                                                    protocol::sequance_id_t id,
+                                                    int argc,
+                                                    char* argv[]) WARN_UNUSED_RESULT;
+  virtual common::Error HandleRequestClientStopService(daemon_client::DaemonClient* dclient,
+                                                       protocol::sequance_id_t id,
+                                                       int argc,
+                                                       char* argv[]) WARN_UNUSED_RESULT;
 
-  Config config_;
   common::libev::IoLoop* loop_;
+
+ private:
   common::libev::timer_id_t ping_client_id_timer_;
-  common::libev::timer_id_t cleanup_timer_;
   std::atomic<seq_id_t> id_;
 
   const std::string license_key_;
 };
-}
 }
