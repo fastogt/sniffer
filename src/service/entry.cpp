@@ -12,28 +12,11 @@
     along with sniffer.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#pragma once
-
-#include <common/serializer/json_serializer.h>
+#include "service/entry.h"
 
 namespace sniffer {
-namespace commands_info {
+namespace service {
 
-class LicenseInfo : public common::serializer::JsonSerializer<LicenseInfo> {
- public:
-  typedef JsonSerializer<LicenseInfo> base_class;
-  LicenseInfo();
-  explicit LicenseInfo(const std::string& license);
-
-  std::string GetLicense() const;
-
- protected:
-  virtual common::Error DoDeSerialize(json_object* serialized) override;
-  virtual common::Error SerializeFields(json_object* out) const override;
-
- private:
-  std::string license_;  // utc time
-};
-
-}  // namespace server
+Entry::Entry(const std::string& mac, common::time64_t ts, int8_t ssi) : mac_address(mac), timestamp(ts), ssi(ssi) {}
+}
 }

@@ -14,26 +14,29 @@
 
 #pragma once
 
-#include <common/serializer/json_serializer.h>
+#include <common/libev/tcp/tcp_client.h>  // for TcpClient
+
+#include "protocol/protocol.h"
 
 namespace sniffer {
-namespace commands_info {
+namespace daemon_client {
 
-class LicenseInfo : public common::serializer::JsonSerializer<LicenseInfo> {
+class DaemonClient : public common::libev::tcp::TcpClient {
  public:
-  typedef JsonSerializer<LicenseInfo> base_class;
-  LicenseInfo();
-  explicit LicenseInfo(const std::string& license);
+  typedef common::libev::tcp::TcpClient base_class;
+  DaemonClient(common::libev::IoLoop* server, const common::net::socket_info& info);
+  virtual ~DaemonClient();
 
-  std::string GetLicense() const;
+  bool IsVerified() const;
+  void SetVerified(bool verif);
 
- protected:
-  virtual common::Error DoDeSerialize(json_object* serialized) override;
-  virtual common::Error SerializeFields(json_object* out) const override;
+  const char* ClassName() const override;
 
  private:
-  std::string license_;  // utc time
+  bool is_verified_;
 };
 
-}  // namespace server
+typedef protocol::ProtocolClient<DaemonClient> ProtocoledDaemonClient;
+
+}
 }

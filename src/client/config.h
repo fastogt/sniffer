@@ -14,26 +14,29 @@
 
 #pragma once
 
-#include <common/serializer/json_serializer.h>
+#include <string>  // for string
+
+#include <common/error.h>      // for Error
+#include <common/macros.h>     // for WARN_UNUSED_RESULT
+#include <common/net/types.h>  // for HostAndPort
+#include <common/file_system/path.h>
 
 namespace sniffer {
-namespace commands_info {
+namespace client {
 
-class LicenseInfo : public common::serializer::JsonSerializer<LicenseInfo> {
- public:
-  typedef JsonSerializer<LicenseInfo> base_class;
-  LicenseInfo();
-  explicit LicenseInfo(const std::string& license);
-
-  std::string GetLicense() const;
-
- protected:
-  virtual common::Error DoDeSerialize(json_object* serialized) override;
-  virtual common::Error SerializeFields(json_object* out) const override;
-
- private:
-  std::string license_;  // utc time
+struct ServerSettings {
+  ServerSettings();
+  std::string id;
 };
 
-}  // namespace server
+struct Config {
+  Config();
+
+  ServerSettings server;
+};
+
+common::Error load_config_file(const common::file_system::ascii_file_string_path& config_path, Config* options) WARN_UNUSED_RESULT;
+common::Error save_config_file(const common::file_system::ascii_file_string_path& config_path, Config* options) WARN_UNUSED_RESULT;
+
+}
 }

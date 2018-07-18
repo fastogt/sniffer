@@ -38,4 +38,4 @@ class StopServiceInfo : public LicenseInfo {
 };
 
 }  // namespace server
-}  // namespace iptv_cloud
+}

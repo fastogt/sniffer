@@ -14,26 +14,19 @@
 
 #pragma once
 
-#include <common/serializer/json_serializer.h>
+#include <string>
+
+#include <common/types.h>
 
 namespace sniffer {
-namespace commands_info {
+namespace service {
 
-class LicenseInfo : public common::serializer::JsonSerializer<LicenseInfo> {
- public:
-  typedef JsonSerializer<LicenseInfo> base_class;
-  LicenseInfo();
-  explicit LicenseInfo(const std::string& license);
+struct Entry {
+  explicit Entry(const std::string& mac_address, common::time64_t ts, int8_t ssi);
 
-  std::string GetLicense() const;
-
- protected:
-  virtual common::Error DoDeSerialize(json_object* serialized) override;
-  virtual common::Error SerializeFields(json_object* out) const override;
-
- private:
-  std::string license_;  // utc time
+  std::string mac_address;
+  common::time64_t timestamp;
+  int8_t ssi;
 };
-
-}  // namespace server
+}
 }

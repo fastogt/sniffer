@@ -45,4 +45,4 @@ std::string LicenseInfo::GetLicense() const {
 }
 
 }  // namespace server
-}  // namespace iptv_cloud
+}

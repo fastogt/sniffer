@@ -14,26 +14,29 @@
 
 #pragma once
 
-#include <common/serializer/json_serializer.h>
+#include <common/error.h>
+#include <common/file_system/path.h>
+
+#include <zlib.h>
 
 namespace sniffer {
-namespace commands_info {
+namespace service {
+namespace archive {
 
-class LicenseInfo : public common::serializer::JsonSerializer<LicenseInfo> {
+class TarGZ {
  public:
-  typedef JsonSerializer<LicenseInfo> base_class;
-  LicenseInfo();
-  explicit LicenseInfo(const std::string& license);
+  typedef common::file_system::ascii_string_path path_t;
 
-  std::string GetLicense() const;
+  TarGZ();
+  ~TarGZ();
 
- protected:
-  virtual common::Error DoDeSerialize(json_object* serialized) override;
-  virtual common::Error SerializeFields(json_object* out) const override;
+  common::Error Open(const path_t& path, const char* mode) WARN_UNUSED_RESULT;
+  common::Error Write(const common::buffer_t& data) WARN_UNUSED_RESULT;
+  common::Error Close() WARN_UNUSED_RESULT;
 
  private:
-  std::string license_;  // utc time
+  gzFile file_;
 };
-
-}  // namespace server
+}
+}
 }

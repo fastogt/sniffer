@@ -14,26 +14,34 @@
 
 #pragma once
 
-#include <common/serializer/json_serializer.h>
+#include <pcap.h>
+
+#include <functional>
+
+#include <common/error.h>
+#include <common/file_system/file.h>
+#include <common/file_system/path.h>
 
 namespace sniffer {
-namespace commands_info {
-
-class LicenseInfo : public common::serializer::JsonSerializer<LicenseInfo> {
+namespace service {
+class Pcaper {
  public:
-  typedef JsonSerializer<LicenseInfo> base_class;
-  LicenseInfo();
-  explicit LicenseInfo(const std::string& license);
+  typedef common::file_system::ascii_string_path path_type;
+  typedef std::function<void(const unsigned char*, const pcap_pkthdr&)> pcap_parse_function_t;
 
-  std::string GetLicense() const;
+  Pcaper();
+  ~Pcaper();
 
- protected:
-  virtual common::Error DoDeSerialize(json_object* serialized) override;
-  virtual common::Error SerializeFields(json_object* out) const override;
+  common::Error Open(const path_type& file_path) WARN_UNUSED_RESULT;
+  void Parse(pcap_parse_function_t parse_cb);
+  common::Error Close() WARN_UNUSED_RESULT;
+
+  path_type GetPath() const;
 
  private:
-  std::string license_;  // utc time
+  DISALLOW_COPY_AND_ASSIGN(Pcaper);
+  path_type file_path_;
+  pcap_t* pcap_;
 };
-
-}  // namespace server
+}
 }

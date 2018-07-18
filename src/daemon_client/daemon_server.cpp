@@ -12,28 +12,21 @@
     along with sniffer.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#pragma once
+#include "daemon_client/daemon_server.h"
 
-#include <common/serializer/json_serializer.h>
+#include "daemon_client/daemon_client.h"
 
 namespace sniffer {
-namespace commands_info {
+namespace daemon_client {
 
-class LicenseInfo : public common::serializer::JsonSerializer<LicenseInfo> {
- public:
-  typedef JsonSerializer<LicenseInfo> base_class;
-  LicenseInfo();
-  explicit LicenseInfo(const std::string& license);
+DaemonServer::DaemonServer(const common::net::HostAndPort& host, common::libev::IoLoopObserver* observer)
+    : base_class(host, true, observer) {}
 
-  std::string GetLicense() const;
+DaemonServer::~DaemonServer() {}
 
- protected:
-  virtual common::Error DoDeSerialize(json_object* serialized) override;
-  virtual common::Error SerializeFields(json_object* out) const override;
+common::libev::tcp::TcpClient* DaemonServer::CreateClient(const common::net::socket_info& info) {
+  return new DaemonClient(this, info);
+}
 
- private:
-  std::string license_;  // utc time
-};
-
-}  // namespace server
+}
 }

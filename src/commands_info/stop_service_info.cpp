@@ -49,4 +49,4 @@ common::time64_t StopServiceInfo::GetDelay() const {
 }
 
 }  // namespace server
-}  // namespace iptv_cloud
+}
