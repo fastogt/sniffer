@@ -12,34 +12,8 @@
     along with sniffer.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#pragma once
-
-#include <common/error.h>
-#include <common/file_system/path.h>
-
-#include <zlib.h>
+#include "isniffer_observer.h"
 
 namespace sniffer {
-namespace service {
-namespace archive {
-
-common::Error MakeArchive(const common::file_system::ascii_file_string_path& file_path,
-                          const common::file_system::ascii_file_string_path& archive_path);
-
-class TarGZ {
- public:
-  typedef common::file_system::ascii_string_path path_t;
-
-  TarGZ();
-  ~TarGZ();
-
-  common::Error Open(const path_t& path, const char* mode) WARN_UNUSED_RESULT;
-  common::Error Write(const common::buffer_t& data) WARN_UNUSED_RESULT;
-  common::Error Close() WARN_UNUSED_RESULT;
-
- private:
-  gzFile file_;
-};
-}
-}
+namespace sniffer {}
 }

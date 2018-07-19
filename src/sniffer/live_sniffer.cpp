@@ -12,34 +12,33 @@
     along with sniffer.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#pragma once
+#include "sniffer/live_sniffer.h"
 
-#include <common/error.h>
-#include <common/file_system/path.h>
-
-#include <zlib.h>
+#include <common/sprintf.h>
 
 namespace sniffer {
-namespace service {
-namespace archive {
+namespace sniffer {
 
-common::Error MakeArchive(const common::file_system::ascii_file_string_path& file_path,
-                          const common::file_system::ascii_file_string_path& archive_path);
+LiveSniffer::LiveSniffer(ISnifferObserver* observer) : base_class(observer) {}
 
-class TarGZ {
- public:
-  typedef common::file_system::ascii_string_path path_t;
+LiveSniffer::~LiveSniffer() {}
 
-  TarGZ();
-  ~TarGZ();
+common::Error LiveSniffer::Open() {
+  DCHECK(!IsValid());
 
-  common::Error Open(const path_t& path, const char* mode) WARN_UNUSED_RESULT;
-  common::Error Write(const common::buffer_t& data) WARN_UNUSED_RESULT;
-  common::Error Close() WARN_UNUSED_RESULT;
+  char errbuf[PCAP_ERRBUF_SIZE];
+  const char* device = pcap_lookupdev(errbuf);
+  if (device == NULL) {
+    return common::make_error(common::MemSPrintf("Couldn't find default device: %s", errbuf));
+  }
 
- private:
-  gzFile file_;
-};
+  pcap_t* pcap = pcap_open_live(device, BUFSIZ, PCAP_TSTAMP_PRECISION_MICRO, -1, errbuf);
+  if (!pcap) {
+    return common::make_error(common::MemSPrintf("error reading pcap file: %s", errbuf));
+  }
+
+  pcap_ = pcap;
+  return common::Error();
 }
 }
 }

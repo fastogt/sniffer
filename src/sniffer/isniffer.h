@@ -16,32 +16,38 @@
 
 #include <pcap.h>
 
-#include <functional>
-
 #include <common/error.h>
-#include <common/file_system/file.h>
-#include <common/file_system/path.h>
 
 namespace sniffer {
-namespace service {
-class Pcaper {
+namespace sniffer {
+class ISnifferObserver;
+
+class ISniffer {
  public:
-  typedef common::file_system::ascii_string_path path_type;
-  typedef std::function<void(const unsigned char*, const pcap_pkthdr&)> pcap_parse_function_t;
+  ISniffer(ISnifferObserver* observer);
+  virtual ~ISniffer();
 
-  Pcaper();
-  ~Pcaper();
+  virtual common::Error Open() WARN_UNUSED_RESULT = 0;
+  virtual common::Error Close() WARN_UNUSED_RESULT;
 
-  common::Error Open(const path_type& file_path) WARN_UNUSED_RESULT;
-  void Parse(pcap_parse_function_t parse_cb);
-  common::Error Close() WARN_UNUSED_RESULT;
+  void Run();
+  void Stop();
 
-  path_type GetPath() const;
+  size_t GetCurrentPos() const;
+
+  bool IsValid() const;
+  bool IsOpen() const;
+
+ protected:
+  pcap_t* pcap_;
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(Pcaper);
-  path_type file_path_;
-  pcap_t* pcap_;
+  DISALLOW_COPY_AND_ASSIGN(ISniffer);
+
+  size_t pos_;
+  ISnifferObserver* observer_;
+  volatile bool stopped_;
 };
+
 }
 }

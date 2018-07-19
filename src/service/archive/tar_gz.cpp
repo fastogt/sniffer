@@ -15,10 +15,40 @@
 #include "service/archive/tar_gz.h"
 
 #include <common/sprintf.h>
+#include <common/file_system/file.h>
 
 namespace sniffer {
 namespace service {
 namespace archive {
+
+common::Error MakeArchive(const common::file_system::ascii_file_string_path& file_path,
+                          const common::file_system::ascii_file_string_path& archive_path) {
+  if (!file_path.IsValid() || !archive_path.IsValid()) {
+    return common::make_error_inval();
+  }
+
+  archive::TarGZ tr;
+  common::Error err = tr.Open(archive_path, "wb");
+  if (err) {
+    return err;
+  }
+
+  common::file_system::ANSIFile fl;
+  common::ErrnoError errn = fl.Open(file_path, "rb");
+  if (errn) {
+    tr.Close();
+    return common::make_error_from_errno(errn);
+  }
+
+  common::buffer_t buff;
+  while (fl.Read(&buff, 8192)) {
+    tr.Write(buff);
+  }
+
+  fl.Close();
+  tr.Close();
+  return common::Error();
+}
 
 TarGZ::TarGZ() : file_(NULL) {}
 

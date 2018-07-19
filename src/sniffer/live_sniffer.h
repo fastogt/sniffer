@@ -14,35 +14,18 @@
 
 #pragma once
 
-#include "process_wrapper.h"
-
-#include "sniffer/isniffer_observer.h"
-
-#include "config.h"
+#include "sniffer/isniffer.h"
 
 namespace sniffer {
-namespace client {
+namespace sniffer {
 
-class SnifferService : public ProcessWrapper, public sniffer::ISnifferObserver {
+class LiveSniffer : public ISniffer {
  public:
-  typedef ProcessWrapper base_class;
-  enum { client_port = 6317 };
+  typedef ISniffer base_class;
+  LiveSniffer(ISnifferObserver* observer);
+  virtual ~LiveSniffer();
 
-  SnifferService(const std::string& license_key);
-  virtual ~SnifferService();
-
-  static common::file_system::ascii_file_string_path GetConfigPath();
-  static common::net::HostAndPort GetServerHostAndPort();
-
-  virtual int Exec(int argc, char** argv) override;
-
- protected:
-  virtual void HandlePacket(sniffer::ISniffer* sniffer, const unsigned char* packet, const pcap_pkthdr& header);
-
- private:
-  void ReadConfig(const common::file_system::ascii_file_string_path& config_path);
-
-  Config config_;
+  virtual common::Error Open() override WARN_UNUSED_RESULT;
 };
 }
 }

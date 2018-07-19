@@ -34,8 +34,26 @@ SET(COMMANDS_INFO_SOURCES
   ${CMAKE_SOURCE_DIR}/src/commands_info/stop_service_info.cpp
 )
 
-SET(GLOBAL_HEADERS ${CMAKE_SOURCE_DIR}/src/process_wrapper.h)
-SET(GLOBAL_SOURCES ${CMAKE_SOURCE_DIR}/src/process_wrapper.cpp)
+SET(GLOBAL_HEADERS
+  ${CMAKE_SOURCE_DIR}/src/process_wrapper.h
+)
+SET(GLOBAL_SOURCES
+  ${CMAKE_SOURCE_DIR}/src/process_wrapper.cpp
+)
+
+SET(SNIFFER_HEADERS
+  ${CMAKE_SOURCE_DIR}/src/sniffer/isniffer.h
+  ${CMAKE_SOURCE_DIR}/src/sniffer/isniffer_observer.h
+  ${CMAKE_SOURCE_DIR}/src/sniffer/live_sniffer.h
+  ${CMAKE_SOURCE_DIR}/src/sniffer/file_sniffer.h
+)
+
+SET(SNIFFER_SOURCE
+  ${CMAKE_SOURCE_DIR}/src/sniffer/isniffer.cpp
+  ${CMAKE_SOURCE_DIR}/src/sniffer/isniffer_observer.cpp
+  ${CMAKE_SOURCE_DIR}/src/sniffer/live_sniffer.cpp
+  ${CMAKE_SOURCE_DIR}/src/sniffer/file_sniffer.cpp
+)
 
 SET(SDS_SOURCES
   ${CMAKE_SOURCE_DIR}/src/third-party/sds/sds.c
@@ -59,6 +77,7 @@ SET(SNIFFER_COMMON_SOURCES
   ${PROTOCOL_HEADERS} ${PROTOCOL_SOURCES}
   ${DAEMON_HEADERS} ${DAEMON_SOURCES}
   ${COMMANDS_INFO_HEADERS} ${COMMANDS_INFO_SOURCES}
+  ${SNIFFER_HEADERS} ${SNIFFER_SOURCE}
   ${GLOBAL_HEADERS} ${GLOBAL_SOURCES}
 )
 SET(SNIFFER_COMMON_LIBRARIES ${SNIFFER_COMMON_LIBRARIES} ${JSONC_LIBRARIES} ${COMMON_BASE_LIBRARY})

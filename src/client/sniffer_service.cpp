@@ -14,10 +14,11 @@
 
 #include "client/sniffer_service.h"
 
-#include <sys/inotify.h>
 #include <netinet/ether.h>
 
-#define CLIENT_PORT 6317
+#include <thread>
+
+#include "sniffer/live_sniffer.h"
 
 #define SIZE_OF_MAC_ADDRESS ETH_ALEN
 #define BROADCAST_MAC \
@@ -48,12 +49,30 @@ SnifferService::SnifferService(const std::string& license_key)
   ReadConfig(GetConfigPath());
 }
 
-SnifferService::~SnifferService() {
+SnifferService::~SnifferService() {}
+
+int SnifferService::Exec(int argc, char** argv) {
+  sniffer::LiveSniffer* live = new sniffer::LiveSniffer(this);
+  common::Error err = live->Open();
+  if (err) {
+    DEBUG_MSG_ERROR(err, common::logging::LOG_LEVEL_ERR);
+    return EXIT_FAILURE;
+  }
+
+  auto th = std::thread([live]() { live->Run(); });
+  int res = base_class::Exec(argc, argv);
+  th.join();
+  live->Close();
+  delete live;
+  return res;
 }
 
 common::file_system::ascii_file_string_path SnifferService::GetConfigPath() {
   return common::file_system::ascii_file_string_path(CONFIG_FILE_PATH);
 }
+
+void SnifferService::HandlePacket(sniffer::ISniffer* sniffer, const unsigned char* packet, const pcap_pkthdr& header) {}
+
 void SnifferService::ReadConfig(const common::file_system::ascii_file_string_path& config_path) {
   common::Error err = load_config_file(config_path, &config_);
   if (err) {
@@ -62,7 +81,7 @@ void SnifferService::ReadConfig(const common::file_system::ascii_file_string_pat
 }
 
 common::net::HostAndPort SnifferService::GetServerHostAndPort() {
-  return common::net::HostAndPort::CreateLocalHost(CLIENT_PORT);
+  return common::net::HostAndPort::CreateLocalHost(client_port);
 }
 }
 }

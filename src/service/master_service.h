@@ -17,6 +17,7 @@
 #include <common/threads/thread_pool.h>
 
 #include "process_wrapper.h"
+#include "sniffer/isniffer_observer.h"
 
 #include "config.h"
 #include "entry.h"
@@ -26,10 +27,10 @@ namespace service {
 class FolderChangeReader;
 class DatabaseHolder;
 
-class MasterService : public ProcessWrapper {
+class MasterService : public ProcessWrapper, public sniffer::ISnifferObserver {
  public:
   typedef ProcessWrapper base_class;
-  enum { cleanup_seconds = 5, thread_pool_size = 3 };
+  enum { cleanup_seconds = 5, thread_pool_size = 3, client_port = 6317 };
   MasterService(const std::string& license_key);
   virtual ~MasterService();
 
@@ -48,6 +49,8 @@ class MasterService : public ProcessWrapper {
   virtual void HandleEntries(const common::file_system::ascii_directory_string_path& path,
                              const std::vector<Entry>& entries);
 
+  virtual void HandlePacket(sniffer::ISniffer* sniffer, const unsigned char* packet, const pcap_pkthdr& header) override;
+
  private:
   void TouchEntries(const common::file_system::ascii_directory_string_path& path, const std::vector<Entry>& entries);
 
@@ -56,16 +59,10 @@ class MasterService : public ProcessWrapper {
   void ReadConfig(const common::file_system::ascii_file_string_path& config_path);
 
   Config config_;
-  common::libev::IoLoop* loop_;
-  common::libev::timer_id_t ping_client_id_timer_;
   common::libev::timer_id_t cleanup_timer_;
   FolderChangeReader* watcher_;
   DatabaseHolder* db_;
-  std::atomic<seq_id_t> id_;
-
   common::threads::ThreadPool thread_pool_;
-
-  const std::string license_key_;
 };
 }
 }
