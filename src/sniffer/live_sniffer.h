@@ -26,6 +26,11 @@ class LiveSniffer : public ISniffer {
   virtual ~LiveSniffer();
 
   virtual common::Error Open() override WARN_UNUSED_RESULT;
+
+  std::string GetDevice() const;
+
+ private:
+  std::string device_;
 };
 }
 }

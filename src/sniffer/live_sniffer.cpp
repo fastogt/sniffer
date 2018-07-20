@@ -19,7 +19,7 @@
 namespace sniffer {
 namespace sniffer {
 
-LiveSniffer::LiveSniffer(ISnifferObserver* observer) : base_class(observer) {}
+LiveSniffer::LiveSniffer(ISnifferObserver* observer) : base_class(observer), device_() {}
 
 LiveSniffer::~LiveSniffer() {}
 
@@ -38,7 +38,12 @@ common::Error LiveSniffer::Open() {
   }
 
   pcap_ = pcap;
+  device_ = device;
   return common::Error();
+}
+
+std::string LiveSniffer::GetDevice() const {
+  return device_;
 }
 }
 }

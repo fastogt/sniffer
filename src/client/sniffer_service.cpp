@@ -63,6 +63,7 @@ int SnifferService::Exec(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
+  INFO_LOG() << "Opended device: " << live->GetDevice();
   auto th = std::thread([live]() { live->Run(); });
   int res = base_class::Exec(argc, argv);
   th.join();
@@ -77,6 +78,7 @@ common::file_system::ascii_file_string_path SnifferService::GetConfigPath() {
 
 void SnifferService::HandlePacket(sniffer::ISniffer* sniffer, const unsigned char* packet, const pcap_pkthdr& header) {
   bpf_u_int32 packet_len = header.caplen;
+  INFO_LOG() << "Received packet size: " << packet_len;
   if (packet_len < sizeof(struct radiotap_header)) {
     return;
   }
