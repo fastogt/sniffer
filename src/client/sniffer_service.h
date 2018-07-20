@@ -37,7 +37,9 @@ class SnifferService : public ProcessWrapper, public sniffer::ISnifferObserver {
   virtual int Exec(int argc, char** argv) override;
 
  protected:
-  virtual void HandlePacket(sniffer::ISniffer* sniffer, const unsigned char* packet, const pcap_pkthdr& header);
+  virtual void HandlePacket(sniffer::ISniffer* sniffer,
+                            const u_char* packet,
+                            const struct pcap_pkthdr* header) override;
 
  private:
   void ReadConfig(const common::file_system::ascii_file_string_path& config_path);

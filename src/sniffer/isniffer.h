@@ -30,8 +30,8 @@ class ISniffer {
   virtual common::Error Open() WARN_UNUSED_RESULT = 0;
   virtual common::Error Close() WARN_UNUSED_RESULT;
 
-  void Run();
-  void Stop();
+  virtual void Run() = 0;
+  virtual void Stop() = 0;
 
   size_t GetCurrentPos() const;
 
@@ -40,14 +40,13 @@ class ISniffer {
 
  protected:
   pcap_t* pcap_;
+  void HandlePacket(const u_char* packet, const struct pcap_pkthdr* header);
 
  private:
   DISALLOW_COPY_AND_ASSIGN(ISniffer);
 
   size_t pos_;
   ISnifferObserver* observer_;
-  volatile bool stopped_;
 };
-
 }
 }

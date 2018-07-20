@@ -19,7 +19,7 @@
 namespace sniffer {
 namespace sniffer {
 
-ISniffer::ISniffer(ISnifferObserver* observer) : pcap_(NULL), pos_(0), observer_(observer), stopped_(false) {}
+ISniffer::ISniffer(ISnifferObserver* observer) : pcap_(NULL), pos_(0), observer_(observer) {}
 
 ISniffer::~ISniffer() {}
 
@@ -33,27 +33,6 @@ common::Error ISniffer::Close() {
   return common::Error();
 }
 
-void ISniffer::Run() {
-  DCHECK(IsValid());
-
-  struct pcap_pkthdr header;
-  const unsigned char* packet;
-  while ((packet = pcap_next(pcap_, &header)) != NULL) {
-    if (observer_) {
-      observer_->HandlePacket(this, packet, header);
-    }
-    pos_++;
-
-    if (stopped_) {
-      break;
-    }
-  }
-}
-
-void ISniffer::Stop() {
-  stopped_ = true;
-}
-
 bool ISniffer::IsValid() const {
   return pcap_ != NULL;
 }
@@ -64,6 +43,13 @@ bool ISniffer::IsOpen() const {
 
 size_t ISniffer::GetCurrentPos() const {
   return pos_;
+}
+
+void ISniffer::HandlePacket(const u_char* packet, const struct pcap_pkthdr* header) {
+  if (observer_) {
+    observer_->HandlePacket(this, packet, header);
+  }
+  pos_++;
 }
 }
 }

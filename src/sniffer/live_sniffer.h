@@ -27,10 +27,16 @@ class LiveSniffer : public ISniffer {
 
   virtual common::Error Open() override WARN_UNUSED_RESULT;
 
+  virtual void Run() override;
+  virtual void Stop() override;
+
   std::string GetDevice() const;
 
  private:
+  static void pcap_handler(u_char* packet, const struct pcap_pkthdr* header, const u_char* user_data);
+
   std::string device_;
+  bool stopped_;
 };
 }
 }

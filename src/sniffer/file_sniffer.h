@@ -31,11 +31,17 @@ class FileSniffer : public ISniffer {
 
   virtual common::Error Open() override WARN_UNUSED_RESULT;
 
+  void Run() override;
+  void Stop() override;
+
   path_type GetPath() const;
 
  private:
+  static void pcap_handler(u_char* packet, const struct pcap_pkthdr* header, const u_char* user_data);
+
   DISALLOW_COPY_AND_ASSIGN(FileSniffer);
   path_type file_path_;
+  volatile bool stopped_;
 };
 }
 }

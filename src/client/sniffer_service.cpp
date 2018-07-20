@@ -76,8 +76,8 @@ common::file_system::ascii_file_string_path SnifferService::GetConfigPath() {
   return common::file_system::ascii_file_string_path(CONFIG_FILE_PATH);
 }
 
-void SnifferService::HandlePacket(sniffer::ISniffer* sniffer, const unsigned char* packet, const pcap_pkthdr& header) {
-  bpf_u_int32 packet_len = header.caplen;
+void SnifferService::HandlePacket(sniffer::ISniffer* sniffer, const u_char* packet, const pcap_pkthdr* header) {
+  bpf_u_int32 packet_len = header->caplen;
   INFO_LOG() << "Received packet size: " << packet_len;
   if (packet_len < sizeof(struct radiotap_header)) {
     return;
@@ -103,7 +103,7 @@ void SnifferService::HandlePacket(sniffer::ISniffer* sniffer, const unsigned cha
   std::string receiver_mac = ether_ntoa((struct ether_addr*)beac->addr1);
   std::string transmit_mac = ether_ntoa((struct ether_addr*)beac->addr2);
   std::string destination_mac = ether_ntoa((struct ether_addr*)beac->addr3);
-  struct timeval tv = header.ts;
+  struct timeval tv = header->ts;
 
   INFO_LOG() << "Received packet, mac: " << receiver_mac << " , time: " << common::time::timeval2mstime(&tv) / 1000
              << "ssi: " << radio->wt_ssi_signal;

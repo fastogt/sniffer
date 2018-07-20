@@ -24,8 +24,7 @@ class ISniffer;
 
 class ISnifferObserver {
  public:
-  virtual void HandlePacket(ISniffer* sniffer, const unsigned char* packet, const pcap_pkthdr& header) = 0;
+  virtual void HandlePacket(ISniffer* sniffer, const u_char* packet, const struct pcap_pkthdr* header) = 0;
 };
-
 }
 }

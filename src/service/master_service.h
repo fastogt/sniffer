@@ -49,7 +49,9 @@ class MasterService : public ProcessWrapper, public sniffer::ISnifferObserver {
   virtual void HandleEntries(const common::file_system::ascii_directory_string_path& path,
                              const std::vector<Entry>& entries);
 
-  virtual void HandlePacket(sniffer::ISniffer* sniffer, const unsigned char* packet, const pcap_pkthdr& header) override;
+  virtual void HandlePacket(sniffer::ISniffer* sniffer,
+                            const u_char* packet,
+                            const struct pcap_pkthdr* header) override;
 
  private:
   void TouchEntries(const common::file_system::ascii_directory_string_path& path, const std::vector<Entry>& entries);

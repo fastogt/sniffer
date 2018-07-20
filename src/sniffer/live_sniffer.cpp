@@ -19,7 +19,7 @@
 namespace sniffer {
 namespace sniffer {
 
-LiveSniffer::LiveSniffer(ISnifferObserver* observer) : base_class(observer), device_() {}
+LiveSniffer::LiveSniffer(ISnifferObserver* observer) : base_class(observer), device_(), stopped_(false) {}
 
 LiveSniffer::~LiveSniffer() {}
 
@@ -40,6 +40,30 @@ common::Error LiveSniffer::Open() {
   pcap_ = pcap;
   device_ = device;
   return common::Error();
+}
+
+void LiveSniffer::Run() {
+  DCHECK(IsValid());
+
+  struct pcap_pkthdr* header = NULL;
+  const u_char* packet = NULL;
+  int res;
+  while ((res = pcap_next_ex(pcap_, &header, &packet)) >= 0) {
+    HandlePacket(packet, header);
+
+    if (stopped_) {
+      break;
+    }
+  }
+}
+
+void LiveSniffer::Stop() {
+  stopped_ = true;
+}
+
+void LiveSniffer::pcap_handler(u_char* packet, const struct pcap_pkthdr* header, const u_char* user_data) {
+  LiveSniffer* sniffer = (LiveSniffer*)(user_data);
+  sniffer->HandlePacket(packet, header);
 }
 
 std::string LiveSniffer::GetDevice() const {

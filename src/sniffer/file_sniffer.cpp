@@ -46,6 +46,24 @@ common::Error FileSniffer::Open() {
   return common::Error();
 }
 
+void FileSniffer::Run() {
+  DCHECK(IsValid());
+
+  struct pcap_pkthdr header;
+  const u_char* packet;
+  while ((packet = pcap_next(pcap_, &header)) != NULL) {
+    HandlePacket(packet, &header);
+
+    if (stopped_) {
+      break;
+    }
+  }
+}
+
+void FileSniffer::Stop() {
+  stopped_ = true;
+}
+
 FileSniffer::path_type FileSniffer::GetPath() const {
   return file_path_;
 }

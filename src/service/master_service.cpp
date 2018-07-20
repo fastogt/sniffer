@@ -285,8 +285,8 @@ void MasterService::HandleEntries(const common::file_system::ascii_directory_str
   }
 }
 
-void MasterService::HandlePacket(sniffer::ISniffer* sniffer, const unsigned char* packet, const pcap_pkthdr& header) {
-  bpf_u_int32 packet_len = header.caplen;
+void MasterService::HandlePacket(sniffer::ISniffer* sniffer, const u_char* packet, const pcap_pkthdr* header) {
+  bpf_u_int32 packet_len = header->caplen;
   if (packet_len < sizeof(struct radiotap_header)) {
     return;
   }
@@ -313,7 +313,7 @@ void MasterService::HandlePacket(sniffer::ISniffer* sniffer, const unsigned char
   std::string receiver_mac = ether_ntoa((struct ether_addr*)beac->addr1);
   std::string transmit_mac = ether_ntoa((struct ether_addr*)beac->addr2);
   std::string destination_mac = ether_ntoa((struct ether_addr*)beac->addr3);
-  struct timeval tv = header.ts;
+  struct timeval tv = header->ts;
   common::utctime_t ts_cap = pcaper->GetTSFile() + tv.tv_sec;
   Entry ent(receiver_mac, ts_cap * 1000, radio->wt_ssi_signal);  // timestamp in msec
   pcaper->AddEntry(ent);
