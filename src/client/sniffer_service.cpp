@@ -18,6 +18,10 @@
 
 #include <thread>
 
+#include <common/time.h>
+
+#include "pcap_packages/radiotap_header.h"
+
 #include "sniffer/live_sniffer.h"
 
 #define SIZE_OF_MAC_ADDRESS ETH_ALEN
@@ -71,7 +75,36 @@ common::file_system::ascii_file_string_path SnifferService::GetConfigPath() {
   return common::file_system::ascii_file_string_path(CONFIG_FILE_PATH);
 }
 
-void SnifferService::HandlePacket(sniffer::ISniffer* sniffer, const unsigned char* packet, const pcap_pkthdr& header) {}
+void SnifferService::HandlePacket(sniffer::ISniffer* sniffer, const unsigned char* packet, const pcap_pkthdr& header) {
+  bpf_u_int32 packet_len = header.caplen;
+  if (packet_len < sizeof(struct radiotap_header)) {
+    return;
+  }
+
+  struct radiotap_header* radio = (struct radiotap_header*)packet;
+  packet += sizeof(struct radiotap_header);
+  packet_len -= sizeof(struct radiotap_header);
+  if (packet_len < sizeof(struct ieee80211header)) {
+    return;
+  }
+
+  // beacon
+  struct ieee80211header* beac = (struct ieee80211header*)packet;
+  if (ieee80211_dataqos(beac)) {
+  }
+
+  if (need_to_skipped_mac(beac->addr1)) {
+    // skipped_count++;
+    return;
+  }
+
+  std::string receiver_mac = ether_ntoa((struct ether_addr*)beac->addr1);
+  std::string transmit_mac = ether_ntoa((struct ether_addr*)beac->addr2);
+  std::string destination_mac = ether_ntoa((struct ether_addr*)beac->addr3);
+  struct timeval tv = header.ts;
+
+  INFO_LOG() << "Received packet, mac: " << receiver_mac << " , time: " << common::time::timeval2mstime(&tv) / 1000;
+}
 
 void SnifferService::ReadConfig(const common::file_system::ascii_file_string_path& config_path) {
   common::Error err = load_config_file(config_path, &config_);

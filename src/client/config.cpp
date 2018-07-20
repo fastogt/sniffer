@@ -23,12 +23,19 @@
 
 #define CONFIG_SERVER_OPTIONS "server"
 #define CONFIG_SERVER_OPTIONS_ID_FIELD "id"
+#define CONFIG_SERVER_MASTER_NODE_HOST_FIELD "master_node_host"
 
 #define DEFAULT_ID_FIELD_VALUE "localhost"
+#define DEFAULT_MASTER_NODE_PORT 6317
 
+namespace {
+const common::net::HostAndPort kDefaultMasterNodeHost =
+    common::net::HostAndPort::CreateLocalHost(DEFAULT_MASTER_NODE_PORT);
+}
 /*
   [server]
   id=localhost
+  master_node_host=localhost
 */
 
 #define MATCH_FIELD(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
@@ -41,13 +48,19 @@ int ini_handler_fasto(void* user_data, const char* section, const char* name, co
   if (MATCH_FIELD(CONFIG_SERVER_OPTIONS, CONFIG_SERVER_OPTIONS_ID_FIELD)) {
     pconfig->server.id = value;
     return 1;
+  } else if (MATCH_FIELD(CONFIG_SERVER_OPTIONS, CONFIG_SERVER_MASTER_NODE_HOST_FIELD)) {
+    common::net::HostAndPort hs;
+    if (common::ConvertFromString(value, &hs)) {
+      pconfig->server.master_node_host = hs;
+    }
+    return 1;
   } else {
     return 0; /* unknown section/name, error */
   }
 }
 }  // namespace
 
-ServerSettings::ServerSettings() : id(DEFAULT_ID_FIELD_VALUE) {}
+ServerSettings::ServerSettings() : id(DEFAULT_ID_FIELD_VALUE), master_node_host(kDefaultMasterNodeHost) {}
 
 Config::Config() : server() {}
 

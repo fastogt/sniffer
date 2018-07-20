@@ -26,7 +26,7 @@ namespace client {
 class SnifferService : public ProcessWrapper, public sniffer::ISnifferObserver {
  public:
   typedef ProcessWrapper base_class;
-  enum { client_port = 6317 };
+  enum { client_port = 6318 };
 
   SnifferService(const std::string& license_key);
   virtual ~SnifferService();

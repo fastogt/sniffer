@@ -27,6 +27,7 @@ namespace client {
 struct ServerSettings {
   ServerSettings();
   std::string id;
+  common::net::HostAndPort master_node_host;
 };
 
 struct Config {
