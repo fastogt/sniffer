@@ -103,7 +103,8 @@ void SnifferService::HandlePacket(sniffer::ISniffer* sniffer, const unsigned cha
   std::string destination_mac = ether_ntoa((struct ether_addr*)beac->addr3);
   struct timeval tv = header.ts;
 
-  INFO_LOG() << "Received packet, mac: " << receiver_mac << " , time: " << common::time::timeval2mstime(&tv) / 1000;
+  INFO_LOG() << "Received packet, mac: " << receiver_mac << " , time: " << common::time::timeval2mstime(&tv) / 1000
+             << "ssi: " << radio->wt_ssi_signal;
 }
 
 void SnifferService::ReadConfig(const common::file_system::ascii_file_string_path& config_path) {

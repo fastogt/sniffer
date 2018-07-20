@@ -72,7 +72,7 @@ OPTION(LOG_TO_FILE "Logging to file" OFF)
 OPTION(DEVELOPER_ENABLE_TESTS "Enable tests for ${PROJECT_NAME_TITLE} project" OFF)
 OPTION(DEVELOPER_CHECK_STYLE "Enable check style for ${PROJECT_NAME_TITLE} project" OFF)
 OPTION(DEVELOPER_GENERATE_DOCS "Generate docs api for ${PROJECT_NAME_TITLE} project" OFF)
-OPTION(BUILD_SERVICE "Build service for ${PROJECT_NAME_TITLE} project" ON)
+OPTION(BUILD_SERVICE "Build service for ${PROJECT_NAME_TITLE} project" OFF)
 OPTION(BUILD_SNIFFER "Build sniffer for ${PROJECT_NAME_TITLE} project" ON)
 
 ##################################DEFAULT VALUES##########################################
