@@ -63,7 +63,7 @@ int SnifferService::Exec(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-  INFO_LOG() << "Opended device: " << live->GetDevice();
+  INFO_LOG() << "Opended device: " << live->GetDevice() << ", link header type:" << live->GetLinkHeaderType();
   auto th = std::thread([live]() { live->Run(); });
   int res = base_class::Exec(argc, argv);
   th.join();
@@ -78,7 +78,6 @@ common::file_system::ascii_file_string_path SnifferService::GetConfigPath() {
 
 void SnifferService::HandlePacket(sniffer::ISniffer* sniffer, const u_char* packet, const pcap_pkthdr* header) {
   bpf_u_int32 packet_len = header->caplen;
-  INFO_LOG() << "Received packet size: " << packet_len;
   if (packet_len < sizeof(struct radiotap_header)) {
     return;
   }
@@ -86,11 +85,20 @@ void SnifferService::HandlePacket(sniffer::ISniffer* sniffer, const u_char* pack
   struct radiotap_header* radio = (struct radiotap_header*)packet;
   packet += sizeof(struct radiotap_header);
   packet_len -= sizeof(struct radiotap_header);
-  if (packet_len < sizeof(struct ieee80211header)) {
+  if (packet_len < sizeof(struct frame_control)) {
     return;
   }
 
-  // beacon
+  struct frame_control* fc = (struct frame_control*)packet;
+  if (fc->type == TYPE_MNGMT || fc->type == TYPE_DATA) {
+  } else if (fc->type == TYPE_CNTRL) {
+  }
+
+  /*
+  if (packet_len < sizeof(struct ieee80211header)) {
+    return;
+  }*/
+
   struct ieee80211header* beac = (struct ieee80211header*)packet;
   if (ieee80211_dataqos(beac)) {
   }

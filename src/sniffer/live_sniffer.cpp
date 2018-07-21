@@ -69,5 +69,13 @@ void LiveSniffer::pcap_handler(u_char* packet, const struct pcap_pkthdr* header,
 std::string LiveSniffer::GetDevice() const {
   return device_;
 }
+
+int LiveSniffer::GetLinkHeaderType() const {
+  // DLT_PRISM_HEADER
+  // DLT_IEEE802_11_RADIO
+  // https://github.com/sidak/WiFi-Sniffing-and-Distributed-Computing/blob/master/Wifi%20Computing/packetspammer.c
+  return pcap_datalink(pcap_);
+}
+
 }
 }

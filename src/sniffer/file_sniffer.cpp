@@ -20,7 +20,7 @@ namespace sniffer {
 namespace sniffer {
 
 FileSniffer::FileSniffer(const path_type& file_path, ISnifferObserver* observer)
-    : base_class(observer), file_path_(file_path) {}
+    : base_class(observer), file_path_(file_path), stopped_(false) {}
 
 FileSniffer::~FileSniffer() {}
 

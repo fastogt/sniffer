@@ -294,28 +294,48 @@ void MasterService::HandlePacket(sniffer::ISniffer* sniffer, const u_char* packe
   struct radiotap_header* radio = (struct radiotap_header*)packet;
   packet += sizeof(struct radiotap_header);
   packet_len -= sizeof(struct radiotap_header);
-  if (packet_len < sizeof(struct ieee80211header)) {
+  if (packet_len < sizeof(struct frame_control)) {
     return;
   }
 
-  // beacon
-  struct ieee80211header* beac = (struct ieee80211header*)packet;
-  if (ieee80211_dataqos(beac)) {
+  struct frame_control* fc = (struct frame_control*)(packet);
+  mac_address_t mac = {0};
+  if (fc->type == TYPE_MNGMT || fc->type == TYPE_DATA) {
+    if (packet_len < sizeof(struct ieee80211header)) {
+      DNOTREACHED();
+      return;
+    }
+
+    struct ieee80211header* beac = (struct ieee80211header*)packet;
+    memcpy(mac, beac->addr2, sizeof(mac));
+  } else if (fc->type == TYPE_CNTRL) {
+    if (fc->subtype == SUBTYPE_CNTRL_ControlWrapper || fc->subtype == SUBTYPE_CNTRL_CTS ||
+        fc->subtype == SUBTYPE_CNTRL_ACK) {
+      return;
+    }
+
+    size_t offset_second_addr = sizeof(struct frame_control) + sizeof(uint16_t) + sizeof(mac);
+    if (packet_len < offset_second_addr) {
+      DNOTREACHED();
+      return;
+    }
+
+    const u_char* second_addr = packet + offset_second_addr;
+    memcpy(mac, second_addr, sizeof(mac));
+  } else {
+    DNOTREACHED();
   }
 
-  if (need_to_skipped_mac(beac->addr1)) {
+  if (need_to_skipped_mac(mac)) {
     // skipped_count++;
     return;
   }
 
+  std::string source_mac = ether_ntoa((struct ether_addr*)&mac);
   Pcaper* pcaper = static_cast<Pcaper*>(sniffer);
-
-  std::string receiver_mac = ether_ntoa((struct ether_addr*)beac->addr1);
-  std::string transmit_mac = ether_ntoa((struct ether_addr*)beac->addr2);
-  std::string destination_mac = ether_ntoa((struct ether_addr*)beac->addr3);
   struct timeval tv = header->ts;
   common::utctime_t ts_cap = pcaper->GetTSFile() + tv.tv_sec;
-  Entry ent(receiver_mac, ts_cap * 1000, radio->wt_ssi_signal);  // timestamp in msec
+  Entry ent(source_mac, ts_cap * 1000, radio->wt_ssi_signal);  // timestamp in msec
   pcaper->AddEntry(ent);
 }
 }

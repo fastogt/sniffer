@@ -14,9 +14,9 @@
 
 #pragma once
 
-#include <pcap.h>
-
 #include <common/error.h>
+
+struct pcap_pkthdr;
 
 namespace sniffer {
 namespace sniffer {
@@ -26,5 +26,6 @@ class ISnifferObserver {
  public:
   virtual void HandlePacket(ISniffer* sniffer, const u_char* packet, const struct pcap_pkthdr* header) = 0;
 };
+
 }
 }

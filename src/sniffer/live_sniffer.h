@@ -32,6 +32,8 @@ class LiveSniffer : public ISniffer {
 
   std::string GetDevice() const;
 
+  int GetLinkHeaderType() const;
+
  private:
   static void pcap_handler(u_char* packet, const struct pcap_pkthdr* header, const u_char* user_data);
 
