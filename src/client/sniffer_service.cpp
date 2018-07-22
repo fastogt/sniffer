@@ -14,8 +14,6 @@
 
 #include "client/sniffer_service.h"
 
-#include <netinet/ether.h>
-
 #include <thread>
 
 #include <common/time.h>
@@ -24,26 +22,7 @@
 
 #include "sniffer/live_sniffer.h"
 
-#define SIZE_OF_MAC_ADDRESS ETH_ALEN
-#define BROADCAST_MAC \
-  { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }
-
-namespace {
-
-typedef unsigned char mac_address_t[SIZE_OF_MAC_ADDRESS];
-
-const std::array<mac_address_t, 1> g_filtered_macs = {{BROADCAST_MAC}};
-
-bool need_to_skipped_mac(mac_address_t mac) {
-  for (size_t i = 0; i < g_filtered_macs.size(); ++i) {
-    if (memcmp(g_filtered_macs[i], mac, SIZE_OF_MAC_ADDRESS) == 0) {
-      return true;
-    }
-  }
-
-  return false;
-}
-}
+#include "utils.h"
 
 namespace sniffer {
 namespace client {
@@ -77,44 +56,14 @@ common::file_system::ascii_file_string_path SnifferService::GetConfigPath() {
 }
 
 void SnifferService::HandlePacket(sniffer::ISniffer* sniffer, const u_char* packet, const pcap_pkthdr* header) {
-  bpf_u_int32 packet_len = header->caplen;
-  if (packet_len < sizeof(struct radiotap_header)) {
+  Entry ent;
+  PARSE_RESULT res = MakeEntry(packet, header, &ent);
+  if (res != PARSE_OK) {
     return;
   }
 
-  struct radiotap_header* radio = (struct radiotap_header*)packet;
-  packet += sizeof(struct radiotap_header);
-  packet_len -= sizeof(struct radiotap_header);
-  if (packet_len < sizeof(struct frame_control)) {
-    return;
-  }
-
-  struct frame_control* fc = (struct frame_control*)packet;
-  if (fc->type == TYPE_MNGMT || fc->type == TYPE_DATA) {
-  } else if (fc->type == TYPE_CNTRL) {
-  }
-
-  /*
-  if (packet_len < sizeof(struct ieee80211header)) {
-    return;
-  }*/
-
-  struct ieee80211header* beac = (struct ieee80211header*)packet;
-  if (ieee80211_dataqos(beac)) {
-  }
-
-  if (need_to_skipped_mac(beac->addr1)) {
-    // skipped_count++;
-    return;
-  }
-
-  std::string receiver_mac = ether_ntoa((struct ether_addr*)beac->addr1);
-  std::string transmit_mac = ether_ntoa((struct ether_addr*)beac->addr2);
-  std::string destination_mac = ether_ntoa((struct ether_addr*)beac->addr3);
-  struct timeval tv = header->ts;
-
-  INFO_LOG() << "Received packet, mac: " << receiver_mac << " , time: " << common::time::timeval2mstime(&tv) / 1000
-             << "ssi: " << radio->wt_ssi_signal;
+  ent.timestamp = (ent.timestamp / 1000) * 1000;
+  INFO_LOG() << "Received packet, mac: " << ent.mac_address << " , time: " << ent.timestamp << "ssi: " << ent.ssi;
 }
 
 void SnifferService::ReadConfig(const common::file_system::ascii_file_string_path& config_path) {

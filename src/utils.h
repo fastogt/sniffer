@@ -14,19 +14,21 @@
 
 #pragma once
 
-#include <string>
+#include <pcap.h>
 
-#include <common/types.h>
+#include "entry.h"
 
 namespace sniffer {
-namespace service {
 
-struct Entry {
-  explicit Entry(const std::string& mac_address, common::time64_t ts, int8_t ssi);
-
-  std::string mac_address;
-  common::time64_t timestamp;
-  int8_t ssi;
+enum PARSE_RESULT {
+  PARSE_OK,
+  PARSE_INVALID_INPUT,
+  PARSE_INVALID_RADIOTAP_SIZE,
+  PARSE_INVALID_FRAMECONTROL_SIZE,
+  PARSE_CNTRL_PACKET,
+  PARSE_INVALID_PACKET,
+  PARSE_SKIPPED_PACKET
 };
-}
+
+PARSE_RESULT MakeEntry(const u_char* packet, const pcap_pkthdr* header, Entry* ent);
 }

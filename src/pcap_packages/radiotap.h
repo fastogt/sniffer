@@ -1,20 +1,18 @@
-/*
- * Copyright (c) 2017		Intel Deutschland GmbH
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
- * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
- * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
- * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- */
-#ifndef __RADIOTAP_H
-#define __RADIOTAP_H
+/*  Copyright (C) 2014-2018 FastoGT. All right reserved.
+    This file is part of sniffer.
+    sniffer is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    sniffer is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License
+    along with sniffer.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#pragma once
 
 #include <linux/kernel.h>
 
@@ -41,7 +39,7 @@ struct ieee80211_radiotap_header {
    * @it_present: (first) present word
    */
   __le32 it_present;
-} __packed;
+} __attribute__((packed));
 
 /* version is always 0 */
 #define PKTHDR_RADIOTAP_VERSION 0
@@ -200,5 +198,3 @@ enum ieee80211_radiotap_timestamp_flags {
   IEEE80211_RADIOTAP_TIMESTAMP_FLAG_32BIT = 0x01,
   IEEE80211_RADIOTAP_TIMESTAMP_FLAG_ACCURACY = 0x02,
 };
-
-#endif /* __RADIOTAP_H */

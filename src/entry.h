@@ -12,11 +12,20 @@
     along with sniffer.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "service/entry.h"
+#pragma once
+
+#include <string>
+
+#include <common/types.h>
 
 namespace sniffer {
-namespace service {
 
-Entry::Entry(const std::string& mac, common::time64_t ts, int8_t ssi) : mac_address(mac), timestamp(ts), ssi(ssi) {}
-}
+struct Entry {
+  Entry();
+  explicit Entry(const std::string& mac_address, common::time64_t ts, int8_t ssi);
+
+  std::string mac_address;
+  common::time64_t timestamp;
+  int8_t ssi;
+};
 }

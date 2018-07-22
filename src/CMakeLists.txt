@@ -36,9 +36,13 @@ SET(COMMANDS_INFO_SOURCES
 
 SET(GLOBAL_HEADERS
   ${CMAKE_SOURCE_DIR}/src/process_wrapper.h
+  ${CMAKE_SOURCE_DIR}/src/utils.h
+  ${CMAKE_SOURCE_DIR}/src/entry.h
 )
 SET(GLOBAL_SOURCES
   ${CMAKE_SOURCE_DIR}/src/process_wrapper.cpp
+  ${CMAKE_SOURCE_DIR}/src/utils.cpp
+  ${CMAKE_SOURCE_DIR}/src/entry.cpp
 )
 
 SET(SNIFFER_HEADERS

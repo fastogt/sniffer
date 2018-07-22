@@ -15,7 +15,6 @@
 #include "service/master_service.h"
 
 #include <sys/inotify.h>
-#include <netinet/ether.h>
 
 #include <common/file_system/file_system.h>
 #include <common/file_system/string_path_utils.h>
@@ -23,45 +22,24 @@
 
 #include "commands_info/stop_service_info.h"
 
-#include "folder_change_reader.h"
-#include "database_holder.h"
+#include "service/folder_change_reader.h"
+#include "service/database_holder.h"
+
+#include "utils.h"
 
 #include "sniffer/file_sniffer.h"
-
-#include "pcap_packages/radiotap_header.h"
 
 #define EVENT_SIZE (sizeof(struct inotify_event))
 #define BUF_LEN (1024 * (EVENT_SIZE + 16))
 
 // #define ARCHIVE_EXTENSION ".gz"
 
-#define SIZE_OF_MAC_ADDRESS ETH_ALEN
-#define BROADCAST_MAC \
-  { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }
-
-namespace {
-
-typedef unsigned char mac_address_t[SIZE_OF_MAC_ADDRESS];
-
-const std::array<mac_address_t, 1> g_filtered_macs = {{BROADCAST_MAC}};
-
-bool need_to_skipped_mac(mac_address_t mac) {
-  for (size_t i = 0; i < g_filtered_macs.size(); ++i) {
-    if (memcmp(g_filtered_macs[i], mac, SIZE_OF_MAC_ADDRESS) == 0) {
-      return true;
-    }
-  }
-
-  return false;
-}
-}
-
 namespace sniffer {
 namespace {
 class Pcaper : public sniffer::FileSniffer {
  public:
   typedef sniffer::FileSniffer base_class;
-  typedef service::Entry entry_t;
+  typedef Entry entry_t;
   typedef std::vector<entry_t> entries_t;
   Pcaper(common::utctime_t ts_file, const path_type& file_path, sniffer::ISnifferObserver* observer)
       : base_class(file_path, observer), ts_file_(ts_file), entries_() {}
@@ -72,7 +50,7 @@ class Pcaper : public sniffer::FileSniffer {
 
  private:
   common::utctime_t ts_file_;
-  std::vector<service::Entry> entries_;
+  std::vector<entry_t> entries_;
 };
 }
 
@@ -286,56 +264,14 @@ void MasterService::HandleEntries(const common::file_system::ascii_directory_str
 }
 
 void MasterService::HandlePacket(sniffer::ISniffer* sniffer, const u_char* packet, const pcap_pkthdr* header) {
-  bpf_u_int32 packet_len = header->caplen;
-  if (packet_len < sizeof(struct radiotap_header)) {
+  Entry ent;
+  PARSE_RESULT res = MakeEntry(packet, header, &ent);
+  if (res != PARSE_OK) {
     return;
   }
 
-  struct radiotap_header* radio = (struct radiotap_header*)packet;
-  packet += sizeof(struct radiotap_header);
-  packet_len -= sizeof(struct radiotap_header);
-  if (packet_len < sizeof(struct frame_control)) {
-    return;
-  }
-
-  struct frame_control* fc = (struct frame_control*)(packet);
-  mac_address_t mac = {0};
-  if (fc->type == TYPE_MNGMT || fc->type == TYPE_DATA) {
-    if (packet_len < sizeof(struct ieee80211header)) {
-      DNOTREACHED();
-      return;
-    }
-
-    struct ieee80211header* beac = (struct ieee80211header*)packet;
-    memcpy(mac, beac->addr2, sizeof(mac));
-  } else if (fc->type == TYPE_CNTRL) {
-    if (fc->subtype == SUBTYPE_CNTRL_ControlWrapper || fc->subtype == SUBTYPE_CNTRL_CTS ||
-        fc->subtype == SUBTYPE_CNTRL_ACK) {
-      return;
-    }
-
-    size_t offset_second_addr = sizeof(struct frame_control) + sizeof(uint16_t) + sizeof(mac);
-    if (packet_len < offset_second_addr) {
-      DNOTREACHED();
-      return;
-    }
-
-    const u_char* second_addr = packet + offset_second_addr;
-    memcpy(mac, second_addr, sizeof(mac));
-  } else {
-    DNOTREACHED();
-  }
-
-  if (need_to_skipped_mac(mac)) {
-    // skipped_count++;
-    return;
-  }
-
-  std::string source_mac = ether_ntoa((struct ether_addr*)&mac);
   Pcaper* pcaper = static_cast<Pcaper*>(sniffer);
-  struct timeval tv = header->ts;
-  common::utctime_t ts_cap = pcaper->GetTSFile() + tv.tv_sec;
-  Entry ent(source_mac, ts_cap * 1000, radio->wt_ssi_signal);  // timestamp in msec
+  ent.timestamp = ((pcaper->GetTSFile() * 1000 + ent.timestamp) / 1000) * 1000;
   pcaper->AddEntry(ent);
 }
 }
