@@ -63,7 +63,8 @@ void SnifferService::HandlePacket(sniffer::ISniffer* sniffer, const u_char* pack
   }
 
   ent.timestamp = (ent.timestamp / 1000) * 1000;
-  INFO_LOG() << "Received packet, mac: " << ent.mac_address << " , time: " << ent.timestamp << "ssi: " << ent.ssi;
+  INFO_LOG() << "Received packet, mac: " << ent.mac_address << ", time: " << ent.timestamp
+             << ", ssi: " << static_cast<int>(ent.ssi);
 }
 
 void SnifferService::ReadConfig(const common::file_system::ascii_file_string_path& config_path) {
