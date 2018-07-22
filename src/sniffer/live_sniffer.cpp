@@ -32,7 +32,7 @@ common::Error LiveSniffer::Open() {
 
   const char* device_str = device_.c_str();
   char errbuf[PCAP_ERRBUF_SIZE];
-  pcap_t* pcap = pcap_open_live(device_str, BUFSIZ, PCAP_TSTAMP_PRECISION_MICRO, read_timeout, errbuf);
+  pcap_t* pcap = pcap_open_live(device_str, BUFSIZ, PCAP_TSTAMP_PRECISION_MICRO, read_timeout_, errbuf);
   if (!pcap) {
     return common::make_error(common::MemSPrintf("error reading pcap file: %s", errbuf));
   }
