@@ -19,26 +19,25 @@
 namespace sniffer {
 namespace sniffer {
 
-LiveSniffer::LiveSniffer(ISnifferObserver* observer) : base_class(observer), device_(), stopped_(false) {}
+LiveSniffer::LiveSniffer(const std::string& device, ISnifferObserver* observer)
+    : base_class(observer), device_(device), stopped_(false) {}
 
 LiveSniffer::~LiveSniffer() {}
 
 common::Error LiveSniffer::Open() {
   DCHECK(!IsValid());
-
-  char errbuf[PCAP_ERRBUF_SIZE];
-  const char* device = pcap_lookupdev(errbuf);
-  if (device == NULL) {
-    return common::make_error(common::MemSPrintf("Couldn't find default device: %s", errbuf));
+  if (device_.empty()) {
+    return common::make_error_inval();
   }
 
-  pcap_t* pcap = pcap_open_live(device, BUFSIZ, PCAP_TSTAMP_PRECISION_MICRO, -1, errbuf);
+  const char* device_str = device_.c_str();
+  char errbuf[PCAP_ERRBUF_SIZE];
+  pcap_t* pcap = pcap_open_live(device_str, BUFSIZ, PCAP_TSTAMP_PRECISION_MICRO, -1, errbuf);
   if (!pcap) {
     return common::make_error(common::MemSPrintf("error reading pcap file: %s", errbuf));
   }
 
   pcap_ = pcap;
-  device_ = device;
   return common::Error();
 }
 
@@ -76,6 +75,5 @@ int LiveSniffer::GetLinkHeaderType() const {
   // https://github.com/sidak/WiFi-Sniffing-and-Distributed-Computing/blob/master/Wifi%20Computing/packetspammer.c
   return pcap_datalink(pcap_);
 }
-
 }
 }

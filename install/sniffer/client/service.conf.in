@@ -1,3 +1,4 @@
 [server]
 id=localhost
 master_node_host=localhost:6317
+device=eth0

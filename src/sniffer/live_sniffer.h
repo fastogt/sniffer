@@ -22,7 +22,7 @@ namespace sniffer {
 class LiveSniffer : public ISniffer {
  public:
   typedef ISniffer base_class;
-  LiveSniffer(ISnifferObserver* observer);
+  LiveSniffer(const std::string& device, ISnifferObserver* observer);
   virtual ~LiveSniffer();
 
   virtual common::Error Open() override WARN_UNUSED_RESULT;

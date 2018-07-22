@@ -21,21 +21,24 @@
 
 #include "inih/ini.h"
 
-#define CONFIG_SERVER_OPTIONS "server"
-#define CONFIG_SERVER_OPTIONS_ID_FIELD "id"
+#define CONFIG_SERVER "server"
+#define CONFIG_SERVER_ID_FIELD "id"
 #define CONFIG_SERVER_MASTER_NODE_HOST_FIELD "master_node_host"
+#define CONFIG_SERVER_DEVICE_FIELD "device"
 
-#define DEFAULT_ID_FIELD_VALUE "localhost"
-#define DEFAULT_MASTER_NODE_PORT 6317
+#define DEFAULT_MASTER_NODE_PORT_FIELD 6317
 
 namespace {
+const char kDefaultID[] = "localhost";
 const common::net::HostAndPort kDefaultMasterNodeHost =
-    common::net::HostAndPort::CreateLocalHost(DEFAULT_MASTER_NODE_PORT);
+    common::net::HostAndPort::CreateLocalHost(DEFAULT_MASTER_NODE_PORT_FIELD);
+const char kDefaultDevice[] = "erh0";
 }
 /*
   [server]
   id=localhost
   master_node_host=localhost
+  device=eth0
 */
 
 #define MATCH_FIELD(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
@@ -45,14 +48,17 @@ namespace client {
 namespace {
 int ini_handler_fasto(void* user_data, const char* section, const char* name, const char* value) {
   Config* pconfig = reinterpret_cast<Config*>(user_data);
-  if (MATCH_FIELD(CONFIG_SERVER_OPTIONS, CONFIG_SERVER_OPTIONS_ID_FIELD)) {
+  if (MATCH_FIELD(CONFIG_SERVER, CONFIG_SERVER_ID_FIELD)) {
     pconfig->server.id = value;
     return 1;
-  } else if (MATCH_FIELD(CONFIG_SERVER_OPTIONS, CONFIG_SERVER_MASTER_NODE_HOST_FIELD)) {
+  } else if (MATCH_FIELD(CONFIG_SERVER, CONFIG_SERVER_MASTER_NODE_HOST_FIELD)) {
     common::net::HostAndPort hs;
     if (common::ConvertFromString(value, &hs)) {
       pconfig->server.master_node_host = hs;
     }
+    return 1;
+  } else if (MATCH_FIELD(CONFIG_SERVER, CONFIG_SERVER_DEVICE_FIELD)) {
+    pconfig->server.device = value;
     return 1;
   } else {
     return 0; /* unknown section/name, error */
@@ -60,7 +66,7 @@ int ini_handler_fasto(void* user_data, const char* section, const char* name, co
 }
 }  // namespace
 
-ServerSettings::ServerSettings() : id(DEFAULT_ID_FIELD_VALUE), master_node_host(kDefaultMasterNodeHost) {}
+ServerSettings::ServerSettings() : id(kDefaultID), master_node_host(kDefaultMasterNodeHost), device(kDefaultDevice) {}
 
 Config::Config() : server() {}
 

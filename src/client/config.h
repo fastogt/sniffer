@@ -28,6 +28,7 @@ struct ServerSettings {
   ServerSettings();
   std::string id;
   common::net::HostAndPort master_node_host;
+  std::string device;
 };
 
 struct Config {

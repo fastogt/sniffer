@@ -35,7 +35,7 @@ SnifferService::SnifferService(const std::string& license_key)
 SnifferService::~SnifferService() {}
 
 int SnifferService::Exec(int argc, char** argv) {
-  sniffer::LiveSniffer* live = new sniffer::LiveSniffer(this);
+  sniffer::LiveSniffer* live = new sniffer::LiveSniffer(config_.server.device, this);
   common::Error err = live->Open();
   if (err) {
     DEBUG_MSG_ERROR(err, common::logging::LOG_LEVEL_ERR);
