@@ -75,6 +75,10 @@ PARSE_RESULT MakeEntry(const u_char* packet, const pcap_pkthdr* header, Entry* e
 
     struct ieee80211header* beac = (struct ieee80211header*)packet;
     memcpy(mac, beac->addr2, sizeof(mac));
+    std::string mac1 = ether_ntoa((struct ether_addr*)beac->addr1);
+    std::string mac2 = ether_ntoa((struct ether_addr*)beac->addr2);
+    std::string mac3 = ether_ntoa((struct ether_addr*)beac->addr3);
+    INFO_LOG() << "mac1: " << mac1 << "mac2: " << mac2 << "mac3: " << mac3;
   } else if (fc->type == TYPE_CNTRL) {
     if (fc->subtype == SUBTYPE_CNTRL_ControlWrapper || fc->subtype == SUBTYPE_CNTRL_CTS ||
         fc->subtype == SUBTYPE_CNTRL_ACK) {
