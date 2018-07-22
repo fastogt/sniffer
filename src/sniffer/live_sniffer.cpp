@@ -19,8 +19,8 @@
 namespace sniffer {
 namespace sniffer {
 
-LiveSniffer::LiveSniffer(const std::string& device, ISnifferObserver* observer)
-    : base_class(observer), device_(device), stopped_(false) {}
+LiveSniffer::LiveSniffer(const std::string& device, ISnifferObserver* observer, int read_timeout)
+    : base_class(observer), device_(device), read_timeout_(read_timeout), stopped_(false) {}
 
 LiveSniffer::~LiveSniffer() {}
 
@@ -32,7 +32,7 @@ common::Error LiveSniffer::Open() {
 
   const char* device_str = device_.c_str();
   char errbuf[PCAP_ERRBUF_SIZE];
-  pcap_t* pcap = pcap_open_live(device_str, BUFSIZ, PCAP_TSTAMP_PRECISION_MICRO, -1, errbuf);
+  pcap_t* pcap = pcap_open_live(device_str, BUFSIZ, PCAP_TSTAMP_PRECISION_MICRO, read_timeout, errbuf);
   if (!pcap) {
     return common::make_error(common::MemSPrintf("error reading pcap file: %s", errbuf));
   }
@@ -48,11 +48,18 @@ void LiveSniffer::Run() {
   const u_char* packet = NULL;
   int res;
   while ((res = pcap_next_ex(pcap_, &header, &packet)) >= 0) {
-    HandlePacket(packet, header);
+    if (res == 0) {
+    } else if (res == 1) {
+      HandlePacket(packet, header);
+    }
 
     if (stopped_) {
       break;
     }
+  }
+
+  if (res == -1) {
+    ERROR_LOG() << "Reading the packets error: " << pcap_geterr(pcap_);
   }
 }
 

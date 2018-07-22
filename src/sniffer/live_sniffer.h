@@ -22,7 +22,7 @@ namespace sniffer {
 class LiveSniffer : public ISniffer {
  public:
   typedef ISniffer base_class;
-  LiveSniffer(const std::string& device, ISnifferObserver* observer);
+  LiveSniffer(const std::string& device, ISnifferObserver* observer, int read_timeout = 1000);
   virtual ~LiveSniffer();
 
   virtual common::Error Open() override WARN_UNUSED_RESULT;
@@ -38,6 +38,7 @@ class LiveSniffer : public ISniffer {
   static void pcap_handler(u_char* packet, const struct pcap_pkthdr* header, const u_char* user_data);
 
   std::string device_;
+  int read_timeout_;
   bool stopped_;
 };
 }
