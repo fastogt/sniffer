@@ -90,7 +90,8 @@ PARSE_RESULT MakeEntry(const u_char* packet, const pcap_pkthdr* header, Entry* e
     const u_char* second_addr = packet + offset_second_addr;
     memcpy(mac, second_addr, sizeof(mac));
   } else {
-    DNOTREACHED();
+    DNOTREACHED() << "Not handled frame control type: " << fc->type;
+    return PARSE_INVALID_PACKET;
   }
 
   if (need_to_skipped_mac(mac)) {
