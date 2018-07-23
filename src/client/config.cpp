@@ -32,7 +32,7 @@ namespace {
 const char kDefaultID[] = "localhost";
 const common::net::HostAndPort kDefaultMasterNodeHost =
     common::net::HostAndPort::CreateLocalHost(DEFAULT_MASTER_NODE_PORT_FIELD);
-const char kDefaultDevice[] = "erh0";
+const char kDefaultDevice[] = "eth0";
 }
 /*
   [server]
