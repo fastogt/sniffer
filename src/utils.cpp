@@ -21,15 +21,12 @@
 #include <common/time.h>
 #include <common/sprintf.h>
 
+#include "types.h"
 #include "pcap_packages/radiotap_header.h"
 
-#define SIZE_OF_MAC_ADDRESS ETH_ALEN
-#define BROADCAST_MAC \
-  { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }
+namespace sniffer {
 
 namespace {
-
-typedef unsigned char mac_address_t[SIZE_OF_MAC_ADDRESS];
 
 const std::array<mac_address_t, 1> kFilteredMacs = {{BROADCAST_MAC}};
 
@@ -47,12 +44,7 @@ bool need_to_skipped_mac(mac_address_t mac) {
   return false;
 }
 
-std::string mac2string(mac_address_t mac) {
-  return common::MemSPrintf("%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 }
-}
-
-namespace sniffer {
 
 PARSE_RESULT MakeEntry(const u_char* packet, const pcap_pkthdr* header, Entry* ent) {
   if (!packet || !header || !ent) {
