@@ -14,13 +14,18 @@
 
 #include "sniffer/live_sniffer.h"
 
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <linux/if.h>
+#include <netdb.h>
+
 #include <common/sprintf.h>
 
 namespace sniffer {
 namespace sniffer {
 
 LiveSniffer::LiveSniffer(const std::string& device, ISnifferObserver* observer, int read_timeout)
-    : base_class(observer), device_(device), read_timeout_(read_timeout), stopped_(false) {}
+    : base_class(observer), device_(device), mac_{0}, read_timeout_(read_timeout), stopped_(false) {}
 
 LiveSniffer::~LiveSniffer() {}
 
@@ -37,6 +42,12 @@ common::Error LiveSniffer::Open() {
     return common::make_error(common::MemSPrintf("error reading pcap file: %s", errbuf));
   }
 
+  struct ifreq s;
+  int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
+  strcpy(s.ifr_name, device_str);
+  if (ioctl(fd, SIOCGIFHWADDR, &s) == 0) {
+    memcpy(mac_, s.ifr_addr.sa_data, sizeof(mac_));
+  }
   pcap_ = pcap;
   return common::Error();
 }
@@ -74,6 +85,16 @@ void LiveSniffer::pcap_handler(u_char* packet, const struct pcap_pkthdr* header,
 
 std::string LiveSniffer::GetDevice() const {
   return device_;
+}
+
+const unsigned char* LiveSniffer::GetRawMacAddress() const {
+  DCHECK(!IsValid());
+  return mac_;
+}
+
+std::string LiveSniffer::GetMacAddress() const {
+  DCHECK(!IsValid());
+  return mac2string(mac_);
 }
 
 int LiveSniffer::GetLinkHeaderType() const {

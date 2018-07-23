@@ -42,7 +42,8 @@ int SnifferService::Exec(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-  INFO_LOG() << "Opended device: " << live->GetDevice() << ", link header type:" << live->GetLinkHeaderType();
+  INFO_LOG() << "Opended device: " << live->GetDevice() << ", mac address: " << live->GetMacAddress()
+             << ", link header type: " << live->GetLinkHeaderType();
   auto th = std::thread([live]() { live->Run(); });
   int res = base_class::Exec(argc, argv);
   th.join();

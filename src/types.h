@@ -14,38 +14,14 @@
 
 #pragma once
 
-#include "types.h"
+#include <string>
 
-#include "sniffer/isniffer.h"
+#define SIZE_OF_MAC_ADDRESS 6
+#define BROADCAST_MAC \
+  { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }
 
 namespace sniffer {
-namespace sniffer {
+typedef unsigned char mac_address_t[SIZE_OF_MAC_ADDRESS];
 
-class LiveSniffer : public ISniffer {
- public:
-  typedef ISniffer base_class;
-  LiveSniffer(const std::string& device, ISnifferObserver* observer, int read_timeout = 1000);
-  virtual ~LiveSniffer();
-
-  virtual common::Error Open() override WARN_UNUSED_RESULT;
-
-  virtual void Run() override;
-  virtual void Stop() override;
-
-  std::string GetDevice() const;
-
-  const unsigned char* GetRawMacAddress() const;
-  std::string GetMacAddress() const;
-
-  int GetLinkHeaderType() const;
-
- private:
-  static void pcap_handler(u_char* packet, const struct pcap_pkthdr* header, const u_char* user_data);
-
-  std::string device_;
-  mac_address_t mac_;
-  int read_timeout_;
-  bool stopped_;
-};
-}
+std::string mac2string(const mac_address_t mac);
 }

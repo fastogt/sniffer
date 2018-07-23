@@ -34,7 +34,7 @@ struct PACKED_ATTRIBUTE radiotap_header {
   uint8_t wt_reserved_2;
 };
 
-enum TYPE { TYPE_MNGMT = 0, TYPE_CNTRL = 1, TYPE_DATA = 2 };
+enum TYPE { TYPE_MNGMT = 0, TYPE_CNTRL = 1, TYPE_DATA = 2, TYPE_RESERVED = 3 };
 
 enum SUBTYPE_MNGMT {
   SUBTYPE_MNGMT_AssociationRequest = 0,

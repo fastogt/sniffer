@@ -14,14 +14,12 @@
 
 #include "utils.h"
 
-#include <netinet/if_ether.h>
-
 #include <string.h>
 
 #include <array>
 
-#include <common/macros.h>
 #include <common/time.h>
+#include <common/sprintf.h>
 
 #include "pcap_packages/radiotap_header.h"
 
@@ -36,6 +34,10 @@ typedef unsigned char mac_address_t[SIZE_OF_MAC_ADDRESS];
 const std::array<mac_address_t, 1> kFilteredMacs = {{BROADCAST_MAC}};
 
 bool need_to_skipped_mac(mac_address_t mac) {
+  if (ieee80211_broadcast_mac(mac)) {
+    return true;
+  }
+
   for (size_t i = 0; i < kFilteredMacs.size(); ++i) {
     if (memcmp(kFilteredMacs[i], mac, SIZE_OF_MAC_ADDRESS) == 0) {
       return true;
@@ -43,6 +45,10 @@ bool need_to_skipped_mac(mac_address_t mac) {
   }
 
   return false;
+}
+
+std::string mac2string(mac_address_t mac) {
+  return common::MemSPrintf("%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 }
 }
 
@@ -75,10 +81,6 @@ PARSE_RESULT MakeEntry(const u_char* packet, const pcap_pkthdr* header, Entry* e
 
     struct ieee80211header* beac = (struct ieee80211header*)packet;
     memcpy(mac, beac->addr2, sizeof(mac));
-    std::string mac1 = ether_ntoa((struct ether_addr*)beac->addr1);
-    std::string mac2 = ether_ntoa((struct ether_addr*)beac->addr2);
-    std::string mac3 = ether_ntoa((struct ether_addr*)beac->addr3);
-    INFO_LOG() << "mac1: " << mac1 << "mac2: " << mac2 << "mac3: " << mac3;
   } else if (fc->type == TYPE_CNTRL) {
     if (fc->subtype == SUBTYPE_CNTRL_ControlWrapper || fc->subtype == SUBTYPE_CNTRL_CTS ||
         fc->subtype == SUBTYPE_CNTRL_ACK) {
@@ -93,8 +95,10 @@ PARSE_RESULT MakeEntry(const u_char* packet, const pcap_pkthdr* header, Entry* e
 
     const u_char* second_addr = packet + offset_second_addr;
     memcpy(mac, second_addr, sizeof(mac));
+  } else if (fc->type == TYPE_RESERVED) {
+    return PARSE_INVALID_PACKET;
   } else {
-    WARNING_LOG() << "Not handled frame control type: " << static_cast<int>(fc->type);
+    DNOTREACHED() << "Not handled frame control type: " << static_cast<int>(fc->type);
     return PARSE_INVALID_PACKET;
   }
 
@@ -103,7 +107,7 @@ PARSE_RESULT MakeEntry(const u_char* packet, const pcap_pkthdr* header, Entry* e
     return PARSE_SKIPPED_PACKET;
   }
 
-  std::string source_mac = ether_ntoa((struct ether_addr*)&mac);
+  std::string source_mac = mac2string(mac);
   common::time64_t ts_cap = common::time::timeval2mstime(&header->ts);
   *ent = Entry(source_mac, ts_cap, radio->wt_ssi_signal);  // timestamp in msec
   return PARSE_OK;
