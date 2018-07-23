@@ -88,12 +88,12 @@ std::string LiveSniffer::GetDevice() const {
 }
 
 const unsigned char* LiveSniffer::GetRawMacAddress() const {
-  DCHECK(!IsValid());
+  DCHECK(IsValid());
   return mac_;
 }
 
 std::string LiveSniffer::GetMacAddress() const {
-  DCHECK(!IsValid());
+  DCHECK(IsValid());
   return mac2string(mac_);
 }
 
