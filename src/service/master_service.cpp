@@ -265,7 +265,7 @@ void MasterService::HandleEntries(const common::file_system::ascii_directory_str
 
 void MasterService::HandlePacket(sniffer::ISniffer* sniffer, const u_char* packet, const pcap_pkthdr* header) {
   Entry ent;
-  PARSE_RESULT res = MakeEntry(packet, header, &ent);
+  PARSE_RESULT res = MakeEntryFromRadioTap(packet, header, &ent);
   if (res != PARSE_OK) {
     return;
   }

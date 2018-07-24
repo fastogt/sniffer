@@ -14,6 +14,8 @@
 
 #include "utils.h"
 
+#include <netinet/ip.h>
+
 #include <string.h>
 
 #include <array>
@@ -43,17 +45,16 @@ bool need_to_skipped_mac(mac_address_t mac) {
 
   return false;
 }
-
 }
 
-PARSE_RESULT MakeEntry(const u_char* packet, const pcap_pkthdr* header, Entry* ent) {
+PARSE_RESULT MakeEntryFromRadioTap(const u_char* packet, const pcap_pkthdr* header, Entry* ent) {
   if (!packet || !header || !ent) {
     return PARSE_INVALID_INPUT;
   }
 
   bpf_u_int32 packet_len = header->caplen;
   if (packet_len < sizeof(struct radiotap_header)) {
-    return PARSE_INVALID_RADIOTAP_SIZE;
+    return PARSE_INVALID_HEADER_SIZE;
   }
 
   struct radiotap_header* radio = (struct radiotap_header*)packet;
@@ -76,7 +77,7 @@ PARSE_RESULT MakeEntry(const u_char* packet, const pcap_pkthdr* header, Entry* e
   } else if (fc->type == TYPE_CNTRL) {
     if (fc->subtype == SUBTYPE_CNTRL_ControlWrapper || fc->subtype == SUBTYPE_CNTRL_CTS ||
         fc->subtype == SUBTYPE_CNTRL_ACK) {
-      return PARSE_CNTRL_PACKET;
+      return PARSE_SKIPPED_PACKET;
     }
 
     size_t offset_second_addr = sizeof(struct frame_control) + sizeof(uint16_t) + sizeof(mac);
@@ -102,6 +103,28 @@ PARSE_RESULT MakeEntry(const u_char* packet, const pcap_pkthdr* header, Entry* e
   std::string source_mac = mac2string(mac);
   common::time64_t ts_cap = common::time::timeval2mstime(&header->ts);
   *ent = Entry(source_mac, ts_cap, radio->wt_ssi_signal);  // timestamp in msec
+  return PARSE_OK;
+}
+
+PARSE_RESULT MakeEntryFromEthernet(const u_char* packet, const pcap_pkthdr* header, Entry* ent) {
+  if (!packet || !header || !ent) {
+    return PARSE_INVALID_INPUT;
+  }
+
+  bpf_u_int32 packet_len = header->caplen;
+  if (packet_len < sizeof(struct ether_header)) {
+    return PARSE_INVALID_HEADER_SIZE;
+  }
+
+  struct ether_header* ethernet_header = (struct ether_header*)packet;
+  uint16_t ht = ntohs(ethernet_header->ether_type);
+  if (ht != ETHERTYPE_IP) {
+    return PARSE_SKIPPED_PACKET;
+  }
+
+  std::string source_mac = mac2string(ethernet_header->ether_shost);
+  common::time64_t ts_cap = common::time::timeval2mstime(&header->ts);
+  *ent = Entry(source_mac, ts_cap);  // timestamp in msec
   return PARSE_OK;
 }
 }

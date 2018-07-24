@@ -23,12 +23,13 @@ namespace sniffer {
 enum PARSE_RESULT {
   PARSE_OK,
   PARSE_INVALID_INPUT,
-  PARSE_INVALID_RADIOTAP_SIZE,
+  PARSE_INVALID_HEADER_SIZE,
   PARSE_INVALID_FRAMECONTROL_SIZE,
-  PARSE_CNTRL_PACKET,
   PARSE_INVALID_PACKET,
   PARSE_SKIPPED_PACKET
 };
 
-PARSE_RESULT MakeEntry(const u_char* packet, const pcap_pkthdr* header, Entry* ent);
+PARSE_RESULT MakeEntryFromRadioTap(const u_char* packet, const pcap_pkthdr* header, Entry* ent);
+
+PARSE_RESULT MakeEntryFromEthernet(const u_char* packet, const pcap_pkthdr* header, Entry* ent);
 }

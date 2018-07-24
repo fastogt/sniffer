@@ -43,8 +43,8 @@ int SnifferService::Exec(int argc, char** argv) {
   }
 
   int header_type = live->GetLinkHeaderType();
-  if (header_type != DLT_IEEE802_11_RADIO) {
-    ERROR_LOG() << "Now we support only radio headers, but device header type: " << header_type;
+  if (!(header_type == DLT_IEEE802_11_RADIO || header_type == DLT_EN10MB)) {
+    ERROR_LOG() << "Not supported headers, device header type: " << header_type;
     return EXIT_FAILURE;
   }
 
@@ -64,9 +64,17 @@ common::file_system::ascii_file_string_path SnifferService::GetConfigPath() {
 
 void SnifferService::HandlePacket(sniffer::ISniffer* sniffer, const u_char* packet, const pcap_pkthdr* header) {
   Entry ent;
-  PARSE_RESULT res = MakeEntry(packet, header, &ent);
-  if (res != PARSE_OK) {
-    return;
+  sniffer::LiveSniffer* live = static_cast<sniffer::LiveSniffer*>(sniffer);
+  if (live->GetLinkHeaderType() == DLT_IEEE802_11_RADIO) {
+    PARSE_RESULT res = MakeEntryFromRadioTap(packet, header, &ent);
+    if (res != PARSE_OK) {
+      return;
+    }
+  } else if (live->GetLinkHeaderType() == DLT_EN10MB) {
+    PARSE_RESULT res = MakeEntryFromEthernet(packet, header, &ent);
+    if (res != PARSE_OK) {
+      return;
+    }
   }
 
   ent.timestamp = (ent.timestamp / 1000) * 1000;

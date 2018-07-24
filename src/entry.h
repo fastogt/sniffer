@@ -18,11 +18,13 @@
 
 #include <common/types.h>
 
+#define UNKNOWN_SSI 0
+
 namespace sniffer {
 
 struct Entry {
   Entry();
-  explicit Entry(const std::string& mac_address, common::time64_t ts, int8_t ssi);
+  explicit Entry(const std::string& mac_address, common::time64_t ts, int8_t ssi = UNKNOWN_SSI);
 
   std::string mac_address;
   common::time64_t timestamp;
