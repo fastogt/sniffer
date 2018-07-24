@@ -37,8 +37,6 @@ class LiveSniffer : public ISniffer {
   const unsigned char* GetRawMacAddress() const;
   std::string GetMacAddress() const;
 
-  int GetLinkHeaderType() const;
-
  private:
   static void pcap_handler(u_char* packet, const struct pcap_pkthdr* header, const u_char* user_data);
 

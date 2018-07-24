@@ -97,11 +97,5 @@ std::string LiveSniffer::GetMacAddress() const {
   return mac2string(mac_);
 }
 
-int LiveSniffer::GetLinkHeaderType() const {
-  // DLT_PRISM_HEADER
-  // DLT_IEEE802_11_RADIO
-  // https://github.com/sidak/WiFi-Sniffing-and-Distributed-Computing/blob/master/Wifi%20Computing/packetspammer.c
-  return pcap_datalink(pcap_);
-}
 }
 }

@@ -265,13 +265,23 @@ void MasterService::HandleEntries(const common::file_system::ascii_directory_str
 
 void MasterService::HandlePacket(sniffer::ISniffer* sniffer, const u_char* packet, const pcap_pkthdr* header) {
   Entry ent;
-  PARSE_RESULT res = MakeEntryFromRadioTap(packet, header, &ent);
-  if (res != PARSE_OK) {
+  Pcaper* pcaper = static_cast<Pcaper*>(sniffer);
+  if (pcaper->GetLinkHeaderType() == DLT_IEEE802_11_RADIO) {
+    PARSE_RESULT res = MakeEntryFromRadioTap(packet, header, &ent);
+    if (res != PARSE_OK) {
+      return;
+    }
+  } else if (pcaper->GetLinkHeaderType() == DLT_EN10MB) {
+    PARSE_RESULT res = MakeEntryFromEthernet(packet, header, &ent);
+    if (res != PARSE_OK) {
+      return;
+    }
+  } else {
     return;
   }
 
-  Pcaper* pcaper = static_cast<Pcaper*>(sniffer);
-  ent.timestamp = ((pcaper->GetTSFile() * 1000 + ent.timestamp) / 1000) * 1000;
+  // pcaper->GetTSFile() * 1000
+  ent.timestamp = (ent.timestamp / 1000) * 1000;
   pcaper->AddEntry(ent);
 }
 }

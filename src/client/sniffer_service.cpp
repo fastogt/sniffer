@@ -75,6 +75,8 @@ void SnifferService::HandlePacket(sniffer::ISniffer* sniffer, const u_char* pack
     if (res != PARSE_OK) {
       return;
     }
+  } else {
+    return;
   }
 
   ent.timestamp = (ent.timestamp / 1000) * 1000;

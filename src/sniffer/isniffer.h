@@ -38,6 +38,8 @@ class ISniffer {
   bool IsValid() const;
   bool IsOpen() const;
 
+    int GetLinkHeaderType() const;
+
  protected:
   pcap_t* pcap_;
   void HandlePacket(const u_char* packet, const struct pcap_pkthdr* header);
