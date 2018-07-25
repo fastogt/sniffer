@@ -25,6 +25,7 @@ extern "C" {
 
 #include "daemon_client/daemon_client.h"
 #include "daemon_client/daemon_server.h"
+#include "daemon_client/common_commands.h"
 #include "daemon_client/daemon_commands.h"
 
 #include "commands_info/activate_info.h"

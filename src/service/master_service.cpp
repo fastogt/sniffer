@@ -281,8 +281,24 @@ void MasterService::HandlePacket(sniffer::ISniffer* sniffer, const u_char* packe
   }
 
   // pcaper->GetTSFile() * 1000
-  ent.timestamp = (ent.timestamp / 1000) * 1000;
+  ent.SetTimestamp((ent.GetTimestamp() / 1000) * 1000);
   pcaper->AddEntry(ent);
 }
+
+common::Error MasterService::HandleRequestServiceCommand(daemon_client::DaemonClient* dclient,
+                                                          protocol::sequance_id_t id,
+                                                          int argc,
+                                                          char* argv[]) {
+  return base_class::HandleRequestServiceCommand(dclient, id, argc, argv);
+}
+
+common::Error MasterService::HandleResponceServiceCommand(daemon_client::DaemonClient* dclient,
+                                                           protocol::sequance_id_t id,
+                                                           int argc,
+                                                           char* argv[]) {
+  return base_class::HandleResponceServiceCommand(dclient, id, argc, argv);
+}
+
+
 }
 }

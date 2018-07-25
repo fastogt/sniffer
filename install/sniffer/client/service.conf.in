@@ -1,4 +1,7 @@
 [server]
 id=localhost
-master_node_host=localhost:6317
 device=eth0
+
+[master]
+node_host=localhost:6317
+node_license_key=@LICENSE_KEY@

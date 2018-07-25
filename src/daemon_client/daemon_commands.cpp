@@ -14,20 +14,10 @@
 
 #include "daemon_client/daemon_commands.h"
 
-// activate
-#define CLIENT_ACTIVATE_RESP_FAIL_1E GENEATATE_FAIL_FMT(CLIENT_ACTIVATE, "'%s'")
-#define CLIENT_ACTIVATE_RESP_SUCCESS GENEATATE_SUCCESS(CLIENT_ACTIVATE)
-
 // stop service
 #define CLIENT_STOP_SERVICE_REQ_1E GENERATE_REQUEST_FMT_ARGS(CLIENT_STOP_SERVICE, "'%s'")
 #define CLIENT_STOP_SERVICE_RESP_FAIL_1E GENEATATE_FAIL_FMT(CLIENT_STOP_SERVICE, "'%s'")
 #define CLIENT_STOP_SERVICE_RESP_SUCCESS GENEATATE_SUCCESS(CLIENT_STOP_SERVICE)
-
-// requests
-// ping
-#define CLIENT_PING_REQ GENERATE_REQUEST_FMT(CLIENT_PING)
-#define CLIENT_PING_RESP_FAIL_1E GENEATATE_FAIL_FMT(CLIENT_PING, "'%s'")
-#define CLIENT_PING_RESP_SUCCESS GENEATATE_SUCCESS(CLIENT_PING)
 
 namespace sniffer {
 namespace daemon_client {
@@ -42,22 +32,6 @@ protocol::responce_t StopServiceResponceFail(protocol::sequance_id_t id, const s
 
 protocol::request_t StopServiceRequest(protocol::sequance_id_t id, protocol::serializet_t msg) {
   return common::protocols::three_way_handshake::MakeRequest(id, CLIENT_STOP_SERVICE_REQ_1E, msg);
-}
-
-protocol::responce_t ActivateResponceSuccess(protocol::sequance_id_t id) {
-  return common::protocols::three_way_handshake::MakeResponce(id, CLIENT_ACTIVATE_RESP_SUCCESS);
-}
-
-protocol::request_t PingRequest(protocol::sequance_id_t id) {
-  return common::protocols::three_way_handshake::MakeRequest(id, CLIENT_PING_REQ);
-}
-
-protocol::responce_t PingResponceSuccsess(protocol::sequance_id_t id) {
-  return common::protocols::three_way_handshake::MakeResponce(id, CLIENT_PING_RESP_SUCCESS);
-}
-
-protocol::responce_t PingResponceFail(protocol::sequance_id_t id, const std::string& error_text) {
-  return common::protocols::three_way_handshake::MakeResponce(id, CLIENT_PING_RESP_FAIL_1E, error_text);
 }
 
 }  // namespace server

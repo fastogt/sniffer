@@ -11,14 +11,18 @@ SET(PROTOCOL_SOURCES
   ${CMAKE_SOURCE_DIR}/src/protocol/types.cpp
 )
 
-SET(DAEMON_HEADERS
+SET(DAEMON_CLIENT_HEADERS
   ${CMAKE_SOURCE_DIR}/src/daemon_client/daemon_client.h
   ${CMAKE_SOURCE_DIR}/src/daemon_client/daemon_commands.h
+  ${CMAKE_SOURCE_DIR}/src/daemon_client/common_commands.h
+  ${CMAKE_SOURCE_DIR}/src/daemon_client/slave_master_commands.h
   ${CMAKE_SOURCE_DIR}/src/daemon_client/daemon_server.h
 )
-SET(DAEMON_SOURCES
+SET(DAEMON_CLIENT_SOURCES
   ${CMAKE_SOURCE_DIR}/src/daemon_client/daemon_client.cpp
+  ${CMAKE_SOURCE_DIR}/src/daemon_client/common_commands.cpp
   ${CMAKE_SOURCE_DIR}/src/daemon_client/daemon_commands.cpp
+  ${CMAKE_SOURCE_DIR}/src/daemon_client/slave_master_commands.cpp
   ${CMAKE_SOURCE_DIR}/src/daemon_client/daemon_server.cpp
 )
 
@@ -26,12 +30,14 @@ SET(COMMANDS_INFO_HEADERS
   ${CMAKE_SOURCE_DIR}/src/commands_info/activate_info.h
   ${CMAKE_SOURCE_DIR}/src/commands_info/license_info.h
   ${CMAKE_SOURCE_DIR}/src/commands_info/stop_service_info.h
+  ${CMAKE_SOURCE_DIR}/src/commands_info/entries_info.h
 )
 
 SET(COMMANDS_INFO_SOURCES
   ${CMAKE_SOURCE_DIR}/src/commands_info/activate_info.cpp
   ${CMAKE_SOURCE_DIR}/src/commands_info/license_info.cpp
   ${CMAKE_SOURCE_DIR}/src/commands_info/stop_service_info.cpp
+  ${CMAKE_SOURCE_DIR}/src/commands_info/entries_info.cpp
 )
 
 SET(GLOBAL_HEADERS
@@ -81,7 +87,7 @@ ENDIF(OS_WINDOWS)
 
 SET(SNIFFER_COMMON_SOURCES
   ${PROTOCOL_HEADERS} ${PROTOCOL_SOURCES}
-  ${DAEMON_HEADERS} ${DAEMON_SOURCES}
+  ${DAEMON_CLIENT_HEADERS} ${DAEMON_CLIENT_SOURCES}
   ${COMMANDS_INFO_HEADERS} ${COMMANDS_INFO_SOURCES}
   ${SNIFFER_HEADERS} ${SNIFFER_SOURCE}
   ${GLOBAL_HEADERS} ${GLOBAL_SOURCES}

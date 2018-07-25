@@ -37,14 +37,30 @@ class SnifferService : public ProcessWrapper, public sniffer::ISnifferObserver {
   virtual int Exec(int argc, char** argv) override;
 
  protected:
+  virtual void PreLooped(common::libev::IoLoop* server) override;
+  virtual void PostLooped(common::libev::IoLoop* server) override;
+
   virtual void HandlePacket(sniffer::ISniffer* sniffer,
                             const u_char* packet,
                             const struct pcap_pkthdr* header) override;
 
+  virtual common::Error HandleRequestServiceCommand(daemon_client::DaemonClient* dclient,
+                                                    protocol::sequance_id_t id,
+                                                    int argc,
+                                                    char* argv[]) override WARN_UNUSED_RESULT;
+  virtual common::Error HandleResponceServiceCommand(daemon_client::DaemonClient* dclient,
+                                                     protocol::sequance_id_t id,
+                                                     int argc,
+                                                     char* argv[]) override WARN_UNUSED_RESULT;
+
  private:
+  void Connect(common::libev::IoLoop* server);
+  void DisConnect(common::Error err);
+
   void ReadConfig(const common::file_system::ascii_file_string_path& config_path);
 
   Config config_;
+  daemon_client::DaemonClient* inner_connection_;
 };
 }
 }

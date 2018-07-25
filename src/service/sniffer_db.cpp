@@ -36,11 +36,12 @@ namespace sniffer {
 namespace service {
 namespace {
 void init_insert(const Entry& entry, CassStatement* statement) {
-  CassError err = cass_statement_bind_string(statement, 0, entry.mac_address.c_str());
+  std::string mac_str = entry.GetMacAddress();
+  CassError err = cass_statement_bind_string(statement, 0, mac_str.c_str());
   DCHECK(err == CASS_OK) << "error: " << err;
-  err = cass_statement_bind_int64(statement, 1, entry.timestamp);
+  err = cass_statement_bind_int64(statement, 1, entry.GetTimestamp());
   DCHECK(err == CASS_OK) << "error: " << err;
-  err = cass_statement_bind_int8(statement, 2, entry.ssi);
+  err = cass_statement_bind_int8(statement, 2, entry.GetSSI());
   DCHECK(err == CASS_OK) << "error: " << err;
 }
 }

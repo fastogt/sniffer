@@ -16,24 +16,40 @@
 
 #include <common/serializer/json_serializer.h>
 
+#include "entry.h"
+
 namespace sniffer {
 namespace commands_info {
 
-class LicenseInfo : public common::serializer::JsonSerializer<LicenseInfo> {
+class EntriesInfo : public common::serializer::JsonSerializerArray<EntriesInfo> {
  public:
-  typedef JsonSerializer<LicenseInfo> base_class;
-  LicenseInfo();
-  explicit LicenseInfo(const std::string& license);
+  typedef Entry entry_t;
+  typedef std::vector<entry_t> entries_t;
+  EntriesInfo();
 
-  std::string GetLicense() const;
+  void AddEntry(entry_t entry);
+  entries_t GetEntries() const;
+
+  size_t GetSize() const;
+  bool IsEmpty() const;
+
+  bool Equals(const EntriesInfo& chan) const;
 
  protected:
   virtual common::Error DoDeSerialize(json_object* serialized) override;
-  virtual common::Error SerializeFields(json_object* out) const override;
+  virtual common::Error SerializeArray(json_object* deserialized_array) const override;
 
  private:
-  std::string license_;
+  entries_t entries_;
 };
+
+inline bool operator==(const EntriesInfo& lhs, const EntriesInfo& rhs) {
+  return lhs.Equals(rhs);
+}
+
+inline bool operator!=(const EntriesInfo& x, const EntriesInfo& y) {
+  return !(x == y);
+}
 
 }  // namespace server
 }

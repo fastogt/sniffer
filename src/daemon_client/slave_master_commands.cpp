@@ -12,22 +12,10 @@
     along with iptv_cloud.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#pragma once
-
-#include "protocol/protocol.h"
-
-// daemon
-// client commands
-
-#define CLIENT_STOP_SERVICE "stop_service"  // {"delay": 0 }
+#include "daemon_client/slave_master_commands.h"
 
 namespace sniffer {
 namespace daemon_client {
-
-protocol::responce_t StopServiceResponceSuccess(protocol::sequance_id_t id);
-protocol::responce_t StopServiceResponceFail(protocol::sequance_id_t id, const std::string& error_text);
-
-protocol::request_t StopServiceRequest(protocol::sequance_id_t id, protocol::serializet_t msg);
 
 }  // namespace server
 }

@@ -17,10 +17,13 @@
 #include <thread>
 
 #include <common/time.h>
+#include <common/libev/io_loop.h>
 
 #include "pcap_packages/radiotap_header.h"
 
 #include "sniffer/live_sniffer.h"
+
+#include "daemon_client/daemon_client.h"
 
 #include "utils.h"
 
@@ -28,7 +31,7 @@ namespace sniffer {
 namespace client {
 
 SnifferService::SnifferService(const std::string& license_key)
-    : base_class("sniffer_service", GetServerHostAndPort(), license_key), config_() {
+    : base_class("sniffer_service", GetServerHostAndPort(), license_key), config_(), inner_connection_(nullptr) {
   ReadConfig(GetConfigPath());
 }
 
@@ -62,6 +65,17 @@ common::file_system::ascii_file_string_path SnifferService::GetConfigPath() {
   return common::file_system::ascii_file_string_path(CONFIG_FILE_PATH);
 }
 
+void SnifferService::PreLooped(common::libev::IoLoop* server) {
+  Connect(server);
+  base_class::PreLooped(server);
+}
+
+void SnifferService::PostLooped(common::libev::IoLoop* server) {
+  DisConnect(common::Error());
+  CHECK(!inner_connection_);
+  base_class::PostLooped(server);
+}
+
 void SnifferService::HandlePacket(sniffer::ISniffer* sniffer, const u_char* packet, const pcap_pkthdr* header) {
   Entry ent;
   sniffer::LiveSniffer* live = static_cast<sniffer::LiveSniffer*>(sniffer);
@@ -79,9 +93,23 @@ void SnifferService::HandlePacket(sniffer::ISniffer* sniffer, const u_char* pack
     return;
   }
 
-  ent.timestamp = (ent.timestamp / 1000) * 1000;
-  INFO_LOG() << "Received packet, mac: " << ent.mac_address << ", time: " << ent.timestamp
-             << ", ssi: " << static_cast<int>(ent.ssi);
+  ent.SetTimestamp((ent.GetTimestamp() / 1000) * 1000);
+  INFO_LOG() << "Received packet, mac: " << ent.GetMacAddress() << ", time: " << ent.GetTimestamp()
+             << ", ssi: " << static_cast<int>(ent.GetSSI());
+}
+
+common::Error SnifferService::HandleRequestServiceCommand(daemon_client::DaemonClient* dclient,
+                                                          protocol::sequance_id_t id,
+                                                          int argc,
+                                                          char* argv[]) {
+  return base_class::HandleRequestServiceCommand(dclient, id, argc, argv);
+}
+
+common::Error SnifferService::HandleResponceServiceCommand(daemon_client::DaemonClient* dclient,
+                                                           protocol::sequance_id_t id,
+                                                           int argc,
+                                                           char* argv[]) {
+  return base_class::HandleResponceServiceCommand(dclient, id, argc, argv);
 }
 
 void SnifferService::ReadConfig(const common::file_system::ascii_file_string_path& config_path) {
@@ -93,6 +121,36 @@ void SnifferService::ReadConfig(const common::file_system::ascii_file_string_pat
 
 common::net::HostAndPort SnifferService::GetServerHostAndPort() {
   return common::net::HostAndPort::CreateLocalHost(client_port);
+}
+
+void SnifferService::Connect(common::libev::IoLoop* server) {
+  if (!server) {
+    return;
+  }
+
+  DisConnect(common::make_error("Reconnect"));
+
+  common::net::HostAndPort host = config_.master.node_host;
+  common::net::socket_info client_info;
+  common::ErrnoError err = common::net::connect(host, common::net::ST_SOCK_STREAM, 0, &client_info);
+  if (err) {
+    DEBUG_MSG_ERROR(err, common::logging::LOG_LEVEL_ERR);
+    return;
+  }
+
+  daemon_client::DaemonClient* connection = new daemon_client::DaemonClient(server, client_info);
+  inner_connection_ = connection;
+  server->RegisterClient(connection);
+}
+
+void SnifferService::DisConnect(common::Error err) {
+  UNUSED(err);
+  if (inner_connection_) {
+    daemon_client::DaemonClient* connection = inner_connection_;
+    err = connection->Close();
+    DCHECK(!err) << "Close connection error: " << err->GetDescription();
+    delete connection;
+  }
 }
 }
 }

@@ -16,18 +16,13 @@
 
 #include "protocol/protocol.h"
 
-// daemon
-// client commands
 
-#define CLIENT_STOP_SERVICE "stop_service"  // {"delay": 0 }
+#define CLIENT_SEND_ENTRY "send_entry"
 
 namespace sniffer {
 namespace daemon_client {
 
-protocol::responce_t StopServiceResponceSuccess(protocol::sequance_id_t id);
-protocol::responce_t StopServiceResponceFail(protocol::sequance_id_t id, const std::string& error_text);
 
-protocol::request_t StopServiceRequest(protocol::sequance_id_t id, protocol::serializet_t msg);
 
 }  // namespace server
 }

@@ -27,18 +27,26 @@ namespace client {
 struct ServerSettings {
   ServerSettings();
   std::string id;
-  common::net::HostAndPort master_node_host;
   std::string device;
+};
+
+struct MasterSettings {
+  MasterSettings();
+
+  common::net::HostAndPort node_host;
+  std::string node_license_key;
 };
 
 struct Config {
   Config();
 
   ServerSettings server;
+  MasterSettings master;
 };
 
-common::Error load_config_file(const common::file_system::ascii_file_string_path& config_path, Config* options) WARN_UNUSED_RESULT;
-common::Error save_config_file(const common::file_system::ascii_file_string_path& config_path, Config* options) WARN_UNUSED_RESULT;
-
+common::Error load_config_file(const common::file_system::ascii_file_string_path& config_path,
+                               Config* options) WARN_UNUSED_RESULT;
+common::Error save_config_file(const common::file_system::ascii_file_string_path& config_path,
+                               Config* options) WARN_UNUSED_RESULT;
 }
 }

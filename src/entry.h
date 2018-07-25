@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include <string>
+#include <common/serializer/json_serializer.h>
 
 #include <common/types.h>
 
@@ -22,12 +22,32 @@
 
 namespace sniffer {
 
-struct Entry {
+class Entry : public common::serializer::JsonSerializer<Entry> {
+ public:
   Entry();
   explicit Entry(const std::string& mac_address, common::time64_t ts, int8_t ssi = UNKNOWN_SSI);
 
-  std::string mac_address;
-  common::time64_t timestamp;
-  int8_t ssi;
+  bool Equals(const Entry& ent) const;
+  bool IsValid() const;
+
+  std::string GetMacAddress() const;
+
+  common::time64_t GetTimestamp() const;
+  void SetTimestamp(common::time64_t ts);
+
+  int8_t GetSSI() const;
+
+ protected:
+  virtual common::Error DoDeSerialize(json_object* serialized) override;
+  virtual common::Error SerializeFields(json_object* deserialized) const override;
+
+ private:
+  std::string mac_address_;
+  common::time64_t timestamp_;
+  int8_t ssi_;
 };
+
+inline bool operator==(const Entry& left, const Entry& right) {
+  return left.Equals(right);
+}
 }

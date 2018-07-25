@@ -23,8 +23,11 @@
 
 #define CONFIG_SERVER "server"
 #define CONFIG_SERVER_ID_FIELD "id"
-#define CONFIG_SERVER_MASTER_NODE_HOST_FIELD "master_node_host"
 #define CONFIG_SERVER_DEVICE_FIELD "device"
+
+#define CONFIG_MASTER "master"
+#define CONFIG_MASTER_NODE_HOST_FIELD "node_host"
+#define CONFIG_MASTER_NODE_LICENSE_KEY_FIELD "node_license_key"
 
 #define DEFAULT_MASTER_NODE_PORT_FIELD 6317
 
@@ -33,12 +36,16 @@ const char kDefaultID[] = "localhost";
 const common::net::HostAndPort kDefaultMasterNodeHost =
     common::net::HostAndPort::CreateLocalHost(DEFAULT_MASTER_NODE_PORT_FIELD);
 const char kDefaultDevice[] = "eth0";
+const char kDefaultMasterNodeLicenseKey[] = LICENSE_KEY;
 }
 /*
   [server]
   id=localhost
-  master_node_host=localhost
   device=eth0
+
+  [master]
+  node_host=localhost:6317
+  node_license_key=0e4eb3ea92572a4ad627ad27e4a2c14d43a08a12ab25f8d288e33408f071dd0c
 */
 
 #define MATCH_FIELD(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
@@ -51,14 +58,17 @@ int ini_handler_fasto(void* user_data, const char* section, const char* name, co
   if (MATCH_FIELD(CONFIG_SERVER, CONFIG_SERVER_ID_FIELD)) {
     pconfig->server.id = value;
     return 1;
-  } else if (MATCH_FIELD(CONFIG_SERVER, CONFIG_SERVER_MASTER_NODE_HOST_FIELD)) {
-    common::net::HostAndPort hs;
-    if (common::ConvertFromString(value, &hs)) {
-      pconfig->server.master_node_host = hs;
-    }
-    return 1;
   } else if (MATCH_FIELD(CONFIG_SERVER, CONFIG_SERVER_DEVICE_FIELD)) {
     pconfig->server.device = value;
+    return 1;
+  } else if (MATCH_FIELD(CONFIG_MASTER, CONFIG_MASTER_NODE_HOST_FIELD)) {
+    common::net::HostAndPort hs;
+    if (common::ConvertFromString(value, &hs)) {
+      pconfig->master.node_host = hs;
+    }
+    return 1;
+  } else if (MATCH_FIELD(CONFIG_MASTER, CONFIG_MASTER_NODE_LICENSE_KEY_FIELD)) {
+    pconfig->master.node_license_key = value;
     return 1;
   } else {
     return 0; /* unknown section/name, error */
@@ -66,7 +76,9 @@ int ini_handler_fasto(void* user_data, const char* section, const char* name, co
 }
 }  // namespace
 
-ServerSettings::ServerSettings() : id(kDefaultID), master_node_host(kDefaultMasterNodeHost), device(kDefaultDevice) {}
+ServerSettings::ServerSettings() : id(kDefaultID), device(kDefaultDevice) {}
+
+MasterSettings::MasterSettings() : node_host(kDefaultMasterNodeHost), node_license_key(kDefaultMasterNodeLicenseKey) {}
 
 Config::Config() : server() {}
 

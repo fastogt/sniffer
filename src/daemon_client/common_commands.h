@@ -19,15 +19,19 @@
 // daemon
 // client commands
 
-#define CLIENT_STOP_SERVICE "stop_service"  // {"delay": 0 }
+#define CLIENT_ACTIVATE "activate_request"    // { "key": "XXXXXXXXXXXXXXXXXX"}
+#define CLIENT_PING "client_ping"
 
 namespace sniffer {
 namespace daemon_client {
 
-protocol::responce_t StopServiceResponceSuccess(protocol::sequance_id_t id);
-protocol::responce_t StopServiceResponceFail(protocol::sequance_id_t id, const std::string& error_text);
+protocol::responce_t ActivateResponceSuccess(protocol::sequance_id_t id);
 
-protocol::request_t StopServiceRequest(protocol::sequance_id_t id, protocol::serializet_t msg);
+// requests
+// ping
+protocol::request_t PingRequest(protocol::sequance_id_t id);
+protocol::responce_t PingResponceSuccsess(protocol::sequance_id_t id);
+protocol::responce_t PingResponceFail(protocol::sequance_id_t id, const std::string& error_text);  // escaped
 
 }  // namespace server
 }

@@ -53,6 +53,15 @@ class MasterService : public ProcessWrapper, public sniffer::ISnifferObserver {
                             const u_char* packet,
                             const struct pcap_pkthdr* header) override;
 
+  virtual common::Error HandleRequestServiceCommand(daemon_client::DaemonClient* dclient,
+                                                    protocol::sequance_id_t id,
+                                                    int argc,
+                                                    char* argv[]) override WARN_UNUSED_RESULT;
+  virtual common::Error HandleResponceServiceCommand(daemon_client::DaemonClient* dclient,
+                                                     protocol::sequance_id_t id,
+                                                     int argc,
+                                                     char* argv[]) override WARN_UNUSED_RESULT;
+
  private:
   void TouchEntries(const common::file_system::ascii_directory_string_path& path, const std::vector<Entry>& entries);
 
