@@ -22,10 +22,15 @@ namespace commands_info {
 class LicenseInfo : public common::serializer::JsonSerializer<LicenseInfo> {
  public:
   typedef JsonSerializer<LicenseInfo> base_class;
+  typedef std::string license_t;
+
   LicenseInfo();
   explicit LicenseInfo(const std::string& license);
 
+  bool IsValid() const;
+
   std::string GetLicense() const;
+  static bool GetLicense(json_object* serialized, license_t* license);
 
  protected:
   virtual common::Error DoDeSerialize(json_object* serialized) override;

@@ -21,8 +21,29 @@ namespace commands_info {
 
 class ActivateInfo : public LicenseInfo {
  public:
+  typedef LicenseInfo base_class;
   ActivateInfo();
   explicit ActivateInfo(const std::string& license);
+};
+
+class ActivateSlaveInfo : public ActivateInfo {
+ public:
+  typedef ActivateInfo base_class;
+  typedef std::string id_t;
+
+  ActivateSlaveInfo();
+
+  bool IsValid() const;
+
+  id_t GetID() const;
+  static bool GetID(json_object* serialized, id_t* id);
+
+ protected:
+  virtual common::Error DoDeSerialize(json_object* serialized) override;
+  virtual common::Error SerializeFields(json_object* obj) const override;
+
+ private:
+  id_t id_;
 };
 }
 }

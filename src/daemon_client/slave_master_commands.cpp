@@ -14,8 +14,24 @@
 
 #include "daemon_client/slave_master_commands.h"
 
+// activate
+#define SLAVE_ACTIVATE_RESP_FAIL_1E GENEATATE_FAIL_FMT(SLAVE_ACTIVATE, "%s")
+#define SLAVE_ACTIVATE_RESP_SUCCESS GENEATATE_SUCCESS(SLAVE_ACTIVATE)
+
+// activate
+#define SLAVE_SEND_ENTRY_RESP_FAIL_1E GENEATATE_FAIL_FMT(SLAVE_SEND_ENTRY, "%s")
+#define SLAVE_SEND_ENTRY_RESP_SUCCESS GENEATATE_SUCCESS(SLAVE_SEND_ENTRY)
+
 namespace sniffer {
 namespace daemon_client {
+
+protocol::responce_t ActivateSlaveResponceSuccess(protocol::sequance_id_t id) {
+  return common::protocols::three_way_handshake::MakeResponce(id, SLAVE_ACTIVATE_RESP_SUCCESS);
+}
+
+protocol::responce_t EntriesSlaveResponceSuccess(protocol::sequance_id_t id) {
+  return common::protocols::three_way_handshake::MakeResponce(id, SLAVE_SEND_ENTRY_RESP_SUCCESS);
+}
 
 }  // namespace server
 }

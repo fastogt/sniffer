@@ -24,24 +24,44 @@ LicenseInfo::LicenseInfo() : base_class(), license_() {}
 LicenseInfo::LicenseInfo(const std::string& license) : base_class(), license_(license) {}
 
 common::Error LicenseInfo::SerializeFields(json_object* out) const {
+  DCHECK(IsValid());
+
   json_object_object_add(out, LICENSE_INFO_KEY_FIELD, json_object_new_string(license_.c_str()));
   return common::Error();
 }
 
 common::Error LicenseInfo::DoDeSerialize(json_object* serialized) {
   LicenseInfo inf;
-  json_object* jlicense = NULL;
-  json_bool jlicense_exists = json_object_object_get_ex(serialized, LICENSE_INFO_KEY_FIELD, &jlicense);
-  if (jlicense_exists) {
-    inf.license_ = json_object_get_string(jlicense);
+  if (!GetLicense(serialized, &inf.license_)) {
+    DNOTREACHED();
+    return common::make_error_inval();
   }
 
   *this = inf;
   return common::Error();
 }
 
+bool LicenseInfo::IsValid() const {
+  return !license_.empty();
+}
+
 std::string LicenseInfo::GetLicense() const {
   return license_;
+}
+
+bool LicenseInfo::GetLicense(json_object* serialized, license_t* license) {
+  if (!serialized || !license) {
+    return false;
+  }
+
+  json_object* jlicense = NULL;
+  json_bool jlicense_exists = json_object_object_get_ex(serialized, LICENSE_INFO_KEY_FIELD, &jlicense);
+  if (!jlicense_exists) {
+    return false;
+  }
+
+  *license = json_object_get_string(jlicense);
+  return true;
 }
 
 }  // namespace server
