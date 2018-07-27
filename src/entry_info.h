@@ -22,12 +22,12 @@
 
 namespace sniffer {
 
-class Entry : public common::serializer::JsonSerializer<Entry> {
+class EntryInfo : public common::serializer::JsonSerializer<EntryInfo> {
  public:
-  Entry();
-  explicit Entry(const std::string& mac_address, common::time64_t ts, int8_t ssi = UNKNOWN_SSI);
+  EntryInfo();
+  explicit EntryInfo(const std::string& mac_address, common::time64_t ts, int8_t ssi = UNKNOWN_SSI);
 
-  bool Equals(const Entry& ent) const;
+  bool Equals(const EntryInfo& ent) const;
   bool IsValid() const;
 
   std::string GetMacAddress() const;
@@ -47,7 +47,7 @@ class Entry : public common::serializer::JsonSerializer<Entry> {
   int8_t ssi_;
 };
 
-inline bool operator==(const Entry& left, const Entry& right) {
+inline bool operator==(const EntryInfo& left, const EntryInfo& right) {
   return left.Equals(right);
 }
 }

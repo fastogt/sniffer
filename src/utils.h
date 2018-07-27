@@ -16,7 +16,7 @@
 
 #include <pcap.h>
 
-#include "entry.h"
+#include "entry_info.h"
 
 namespace sniffer {
 
@@ -29,7 +29,7 @@ enum PARSE_RESULT {
   PARSE_SKIPPED_PACKET
 };
 
-PARSE_RESULT MakeEntryFromRadioTap(const u_char* packet, const pcap_pkthdr* header, Entry* ent);
+PARSE_RESULT MakeEntryFromRadioTap(const u_char* packet, const pcap_pkthdr* header, EntryInfo* ent);
 
-PARSE_RESULT MakeEntryFromEthernet(const u_char* packet, const pcap_pkthdr* header, Entry* ent);
+PARSE_RESULT MakeEntryFromEthernet(const u_char* packet, const pcap_pkthdr* header, EntryInfo* ent);
 }

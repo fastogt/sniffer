@@ -35,7 +35,7 @@
 namespace sniffer {
 namespace service {
 namespace {
-void init_insert(const Entry& entry, CassStatement* statement) {
+void init_insert(const EntryInfo& entry, CassStatement* statement) {
   std::string mac_str = entry.GetMacAddress();
   CassError err = cass_statement_bind_string(statement, 0, mac_str.c_str());
   DCHECK(err == CASS_OK) << "error: " << err;
@@ -115,7 +115,7 @@ common::Error SnifferDB::Disconnect() {
   return connection_->Disconnect();
 }
 
-common::Error SnifferDB::Insert(const Entry& entry) {
+common::Error SnifferDB::Insert(const EntryInfo& entry) {
   auto prep_stat_cb = [entry](CassStatement* statement) { init_insert(entry, statement); };
   common::Error err = connection_->Execute(insert_query_, 3, prep_stat_cb);
   if (err) {
@@ -125,7 +125,7 @@ common::Error SnifferDB::Insert(const Entry& entry) {
   return common::Error();
 }
 
-common::Error SnifferDB::Insert(const std::vector<Entry>& entries) {
+common::Error SnifferDB::Insert(const std::vector<EntryInfo>& entries) {
 #if 1
   auto prep_batch_cb = [this, entries](CassBatch* batch) {
     for (size_t i = 0; i < entries.size(); ++i) {

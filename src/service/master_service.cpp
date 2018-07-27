@@ -39,7 +39,7 @@ namespace {
 class Pcaper : public sniffer::FileSniffer {
  public:
   typedef sniffer::FileSniffer base_class;
-  typedef Entry entry_t;
+  typedef EntryInfo entry_t;
   typedef std::vector<entry_t> entries_t;
   Pcaper(common::utctime_t ts_file, const path_type& file_path, sniffer::ISnifferObserver* observer)
       : base_class(file_path, observer), ts_file_(ts_file), entries_() {}
@@ -241,12 +241,12 @@ void MasterService::HandlePcapFile(const common::file_system::ascii_directory_st
 }
 
 void MasterService::TouchEntries(const common::file_system::ascii_directory_string_path& path,
-                                 const std::vector<Entry>& entries) {
+                                 const std::vector<EntryInfo>& entries) {
   loop_->ExecInLoopThread([this, path, entries]() { HandleEntries(path, entries); });
 }
 
 void MasterService::HandleEntries(const common::file_system::ascii_directory_string_path& path,
-                                  const std::vector<Entry>& entries) {
+                                  const std::vector<EntryInfo>& entries) {
   CHECK(loop_->IsLoopThread());
 
   std::string table_name = path.GetFolderName();
@@ -264,7 +264,7 @@ void MasterService::HandleEntries(const common::file_system::ascii_directory_str
 }
 
 void MasterService::HandlePacket(sniffer::ISniffer* sniffer, const u_char* packet, const pcap_pkthdr* header) {
-  Entry ent;
+  EntryInfo ent;
   Pcaper* pcaper = static_cast<Pcaper*>(sniffer);
   if (pcaper->GetLinkHeaderType() == DLT_IEEE802_11_RADIO) {
     PARSE_RESULT res = MakeEntryFromRadioTap(packet, header, &ent);
@@ -286,19 +286,17 @@ void MasterService::HandlePacket(sniffer::ISniffer* sniffer, const u_char* packe
 }
 
 common::Error MasterService::HandleRequestServiceCommand(daemon_client::DaemonClient* dclient,
-                                                          protocol::sequance_id_t id,
-                                                          int argc,
-                                                          char* argv[]) {
+                                                         protocol::sequance_id_t id,
+                                                         int argc,
+                                                         char* argv[]) {
   return base_class::HandleRequestServiceCommand(dclient, id, argc, argv);
 }
 
 common::Error MasterService::HandleResponceServiceCommand(daemon_client::DaemonClient* dclient,
-                                                           protocol::sequance_id_t id,
-                                                           int argc,
-                                                           char* argv[]) {
+                                                          protocol::sequance_id_t id,
+                                                          int argc,
+                                                          char* argv[]) {
   return base_class::HandleResponceServiceCommand(dclient, id, argc, argv);
 }
-
-
 }
 }

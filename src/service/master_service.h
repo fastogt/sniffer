@@ -20,7 +20,7 @@
 #include "sniffer/isniffer_observer.h"
 
 #include "config.h"
-#include "entry.h"
+#include "entry_info.h"
 
 namespace sniffer {
 namespace service {
@@ -47,7 +47,7 @@ class MasterService : public ProcessWrapper, public sniffer::ISnifferObserver {
   virtual void HandlePcapFile(const common::file_system::ascii_directory_string_path& node,
                               const common::file_system::ascii_file_string_path& path);
   virtual void HandleEntries(const common::file_system::ascii_directory_string_path& path,
-                             const std::vector<Entry>& entries);
+                             const std::vector<EntryInfo>& entries);
 
   virtual void HandlePacket(sniffer::ISniffer* sniffer,
                             const u_char* packet,
@@ -63,7 +63,8 @@ class MasterService : public ProcessWrapper, public sniffer::ISnifferObserver {
                                                      char* argv[]) override WARN_UNUSED_RESULT;
 
  private:
-  void TouchEntries(const common::file_system::ascii_directory_string_path& path, const std::vector<Entry>& entries);
+  void TouchEntries(const common::file_system::ascii_directory_string_path& path,
+                    const std::vector<EntryInfo>& entries);
 
   common::Error FolderChanged(FolderChangeReader* fclient) WARN_UNUSED_RESULT;
 

@@ -44,13 +44,13 @@ SET(GLOBAL_HEADERS
   ${CMAKE_SOURCE_DIR}/src/types.h
   ${CMAKE_SOURCE_DIR}/src/process_wrapper.h
   ${CMAKE_SOURCE_DIR}/src/utils.h
-  ${CMAKE_SOURCE_DIR}/src/entry.h
+  ${CMAKE_SOURCE_DIR}/src/entry_info.h
 )
 SET(GLOBAL_SOURCES
   ${CMAKE_SOURCE_DIR}/src/types.cpp
   ${CMAKE_SOURCE_DIR}/src/process_wrapper.cpp
   ${CMAKE_SOURCE_DIR}/src/utils.cpp
-  ${CMAKE_SOURCE_DIR}/src/entry.cpp
+  ${CMAKE_SOURCE_DIR}/src/entry_info.cpp
 )
 
 SET(SNIFFER_HEADERS

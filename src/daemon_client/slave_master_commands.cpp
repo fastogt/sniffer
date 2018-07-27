@@ -18,9 +18,13 @@
 #define SLAVE_ACTIVATE_RESP_FAIL_1E GENEATATE_FAIL_FMT(SLAVE_ACTIVATE, "%s")
 #define SLAVE_ACTIVATE_RESP_SUCCESS GENEATATE_SUCCESS(SLAVE_ACTIVATE)
 
-// activate
+// entry
 #define SLAVE_SEND_ENTRY_RESP_FAIL_1E GENEATATE_FAIL_FMT(SLAVE_SEND_ENTRY, "%s")
 #define SLAVE_SEND_ENTRY_RESP_SUCCESS GENEATATE_SUCCESS(SLAVE_SEND_ENTRY)
+
+// entries
+#define SLAVE_SEND_ENTRIES_RESP_FAIL_1E GENEATATE_FAIL_FMT(SLAVE_SEND_ENTRIES, "%s")
+#define SLAVE_SEND_ENTRIES_RESP_SUCCESS GENEATATE_SUCCESS(SLAVE_SEND_ENTRIES)
 
 namespace sniffer {
 namespace daemon_client {
@@ -29,8 +33,12 @@ protocol::responce_t ActivateSlaveResponceSuccess(protocol::sequance_id_t id) {
   return common::protocols::three_way_handshake::MakeResponce(id, SLAVE_ACTIVATE_RESP_SUCCESS);
 }
 
-protocol::responce_t EntriesSlaveResponceSuccess(protocol::sequance_id_t id) {
+protocol::responce_t EntrySlaveResponceSuccess(protocol::sequance_id_t id) {
   return common::protocols::three_way_handshake::MakeResponce(id, SLAVE_SEND_ENTRY_RESP_SUCCESS);
+}
+
+protocol::responce_t EntriesSlaveResponceSuccess(protocol::sequance_id_t id) {
+  return common::protocols::three_way_handshake::MakeResponce(id, SLAVE_SEND_ENTRIES_RESP_SUCCESS);
 }
 
 }  // namespace server

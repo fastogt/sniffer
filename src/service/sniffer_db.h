@@ -17,7 +17,7 @@
 #include <common/error.h>
 #include <common/types.h>
 
-#include "entry.h"
+#include "entry_info.h"
 
 namespace sniffer {
 namespace service {
@@ -34,8 +34,8 @@ class SnifferDB {
   common::Error Connect(const std::vector<std::string>& hosts) WARN_UNUSED_RESULT;  // 127.0.0.1,127.0.0.1
   common::Error Disconnect() WARN_UNUSED_RESULT;
 
-  common::Error Insert(const Entry& entry) WARN_UNUSED_RESULT;
-  common::Error Insert(const std::vector<Entry>& entries) WARN_UNUSED_RESULT;
+  common::Error Insert(const EntryInfo& entry) WARN_UNUSED_RESULT;
+  common::Error Insert(const std::vector<EntryInfo>& entries) WARN_UNUSED_RESULT;
 
   std::string GetTableName() const;
 

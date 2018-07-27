@@ -77,7 +77,7 @@ void SnifferService::PostLooped(common::libev::IoLoop* server) {
 }
 
 void SnifferService::HandlePacket(sniffer::ISniffer* sniffer, const u_char* packet, const pcap_pkthdr* header) {
-  Entry ent;
+  EntryInfo ent;
   sniffer::LiveSniffer* live = static_cast<sniffer::LiveSniffer*>(sniffer);
   if (live->GetLinkHeaderType() == DLT_IEEE802_11_RADIO) {
     PARSE_RESULT res = MakeEntryFromRadioTap(packet, header, &ent);

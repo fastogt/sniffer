@@ -16,14 +16,14 @@
 
 #include <common/serializer/json_serializer.h>
 
-#include "entry.h"
+#include "entry_info.h"
 
 namespace sniffer {
 namespace commands_info {
 
 class EntriesInfo : public common::serializer::JsonSerializerArray<EntriesInfo> {
  public:
-  typedef Entry entry_t;
+  typedef EntryInfo entry_t;
   typedef std::vector<entry_t> entries_t;
   EntriesInfo();
 

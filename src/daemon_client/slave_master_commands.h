@@ -18,11 +18,13 @@
 
 #define SLAVE_ACTIVATE "activate_request"
 #define SLAVE_SEND_ENTRY "send_entry"
+#define SLAVE_SEND_ENTRIES "send_entries"
 
 namespace sniffer {
 namespace daemon_client {
 
 protocol::responce_t ActivateSlaveResponceSuccess(protocol::sequance_id_t id);
+protocol::responce_t EntrySlaveResponceSuccess(protocol::sequance_id_t id);
 protocol::responce_t EntriesSlaveResponceSuccess(protocol::sequance_id_t id);
 
 }  // namespace server

@@ -47,7 +47,7 @@ bool need_to_skipped_mac(mac_address_t mac) {
 }
 }
 
-PARSE_RESULT MakeEntryFromRadioTap(const u_char* packet, const pcap_pkthdr* header, Entry* ent) {
+PARSE_RESULT MakeEntryFromRadioTap(const u_char* packet, const pcap_pkthdr* header, EntryInfo* ent) {
   if (!packet || !header || !ent) {
     return PARSE_INVALID_INPUT;
   }
@@ -102,11 +102,11 @@ PARSE_RESULT MakeEntryFromRadioTap(const u_char* packet, const pcap_pkthdr* head
 
   std::string source_mac = mac2string(mac);
   common::time64_t ts_cap = common::time::timeval2mstime(&header->ts);
-  *ent = Entry(source_mac, ts_cap, radio->wt_ssi_signal);  // timestamp in msec
+  *ent = EntryInfo(source_mac, ts_cap, radio->wt_ssi_signal);  // timestamp in msec
   return PARSE_OK;
 }
 
-PARSE_RESULT MakeEntryFromEthernet(const u_char* packet, const pcap_pkthdr* header, Entry* ent) {
+PARSE_RESULT MakeEntryFromEthernet(const u_char* packet, const pcap_pkthdr* header, EntryInfo *ent) {
   if (!packet || !header || !ent) {
     return PARSE_INVALID_INPUT;
   }
@@ -124,7 +124,7 @@ PARSE_RESULT MakeEntryFromEthernet(const u_char* packet, const pcap_pkthdr* head
 
   std::string source_mac = mac2string(ethernet_header->ether_shost);
   common::time64_t ts_cap = common::time::timeval2mstime(&header->ts);
-  *ent = Entry(source_mac, ts_cap);  // timestamp in msec
+  *ent = EntryInfo(source_mac, ts_cap);  // timestamp in msec
   return PARSE_OK;
 }
 }

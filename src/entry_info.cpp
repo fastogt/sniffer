@@ -12,7 +12,7 @@
     along with sniffer.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "entry.h"
+#include "entry_info.h"
 
 #define ENTRY_MAC_ADDRESS_FIELD "mac_address"
 #define ENTRY_TIMESTAMP_FIELD "timestamp"
@@ -20,35 +20,35 @@
 
 namespace sniffer {
 
-Entry::Entry() : mac_address_(), timestamp_(0), ssi_(0) {}
+EntryInfo::EntryInfo() : mac_address_(), timestamp_(0), ssi_(0) {}
 
-Entry::Entry(const std::string& mac, common::time64_t ts, int8_t ssi) : mac_address_(mac), timestamp_(ts), ssi_(ssi) {}
+EntryInfo::EntryInfo(const std::string& mac, common::time64_t ts, int8_t ssi) : mac_address_(mac), timestamp_(ts), ssi_(ssi) {}
 
-bool Entry::Equals(const Entry& ent) const {
+bool EntryInfo::Equals(const EntryInfo& ent) const {
   return mac_address_ == ent.mac_address_ && timestamp_ == ent.timestamp_ && ssi_ == ent.ssi_;
 }
 
-bool Entry::IsValid() const {
+bool EntryInfo::IsValid() const {
   return !mac_address_.empty();
 }
 
-std::string Entry::GetMacAddress() const {
+std::string EntryInfo::GetMacAddress() const {
   return mac_address_;
 }
 
-common::time64_t Entry::GetTimestamp() const {
+common::time64_t EntryInfo::GetTimestamp() const {
   return timestamp_;
 }
 
-void Entry::SetTimestamp(common::time64_t ts) {
+void EntryInfo::SetTimestamp(common::time64_t ts) {
   timestamp_ = ts;
 }
 
-int8_t Entry::GetSSI() const {
+int8_t EntryInfo::GetSSI() const {
   return ssi_;
 }
 
-common::Error Entry::DoDeSerialize(json_object* serialized) {
+common::Error EntryInfo::DoDeSerialize(json_object* serialized) {
   std::string mac_address;
   json_object* jmac_address = NULL;
   json_bool jmac_address_exists = json_object_object_get_ex(serialized, ENTRY_MAC_ADDRESS_FIELD, &jmac_address);
@@ -70,11 +70,11 @@ common::Error Entry::DoDeSerialize(json_object* serialized) {
     ssi = json_object_get_int(jssi);
   }
 
-  *this = Entry(mac_address, timestamp, ssi);
+  *this = EntryInfo(mac_address, timestamp, ssi);
   return common::Error();
 }
 
-common::Error Entry::SerializeFields(json_object* deserialized) const {
+common::Error EntryInfo::SerializeFields(json_object* deserialized) const {
   if (!IsValid()) {
     return common::make_error_inval();
   }
