@@ -25,6 +25,10 @@
 
 #include "daemon_client/daemon_client.h"
 
+#include "commands_info/entries_info.h"
+
+#include "daemon_client/slave_master_commands.h"
+
 #include "utils.h"
 
 namespace sniffer {
@@ -76,6 +80,13 @@ void SnifferService::PostLooped(common::libev::IoLoop* server) {
   base_class::PostLooped(server);
 }
 
+void SnifferService::Closed(common::libev::IoClient* client) {
+  if (client == inner_connection_) {
+    inner_connection_ = nullptr;
+  }
+  base_class::Closed(client);
+}
+
 void SnifferService::HandlePacket(sniffer::ISniffer* sniffer, const u_char* packet, const pcap_pkthdr* header) {
   EntryInfo ent;
   sniffer::LiveSniffer* live = static_cast<sniffer::LiveSniffer*>(sniffer);
@@ -94,6 +105,23 @@ void SnifferService::HandlePacket(sniffer::ISniffer* sniffer, const u_char* pack
   }
 
   ent.SetTimestamp((ent.GetTimestamp() / 1000) * 1000);
+  if (inner_connection_) {
+    std::string ent_str;
+    common::Error serialize_error = ent.SerializeToString(&ent_str);
+    if (serialize_error) {
+      return;
+    }
+
+    protocol::request_t req = daemon_client::EntrySlaveRequest(NextRequestID(), ent_str);
+    common::Error err = static_cast<daemon_client::ProtocoledDaemonClient*>(inner_connection_)->WriteRequest(req);
+    if (err) {
+      DEBUG_MSG_ERROR(err, common::logging::LOG_LEVEL_WARNING);
+      daemon_client::DaemonClient* connection = inner_connection_;
+      err = connection->Close();
+      DCHECK(!err) << "Close connection error: " << err->GetDescription();
+      delete connection;
+    }
+  }
   INFO_LOG() << "Received packet, mac: " << ent.GetMacAddress() << ", time: " << ent.GetTimestamp()
              << ", ssi: " << static_cast<int>(ent.GetSSI());
 }

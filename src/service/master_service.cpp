@@ -29,6 +29,9 @@
 
 #include "sniffer/file_sniffer.h"
 
+#include "daemon_client/daemon_client.h"
+#include "daemon_client/slave_master_commands.h"
+
 #define EVENT_SIZE (sizeof(struct inotify_event))
 #define BUF_LEN (1024 * (EVENT_SIZE + 16))
 
@@ -289,6 +292,11 @@ common::Error MasterService::HandleRequestServiceCommand(daemon_client::DaemonCl
                                                          protocol::sequance_id_t id,
                                                          int argc,
                                                          char* argv[]) {
+  char* command = argv[0];
+  if (IS_EQUAL_COMMAND(command, SLAVE_SEND_ENTRY)) {
+    return HandleRequestEntryFromSlave(dclient, id, argc, argv);
+  }
+
   return base_class::HandleRequestServiceCommand(dclient, id, argc, argv);
 }
 
@@ -297,6 +305,38 @@ common::Error MasterService::HandleResponceServiceCommand(daemon_client::DaemonC
                                                           int argc,
                                                           char* argv[]) {
   return base_class::HandleResponceServiceCommand(dclient, id, argc, argv);
+}
+
+common::Error MasterService::HandleRequestEntryFromSlave(daemon_client::DaemonClient* dclient,
+                                                         protocol::sequance_id_t id,
+                                                         int argc,
+                                                         char* argv[]) {
+  CHECK(loop_->IsLoopThread());
+  if (argc > 1) {
+    bool is_verified_request = dclient->IsVerified();
+    if (!is_verified_request) {
+      return common::make_error_inval();
+    }
+
+    json_object* jentry = json_tokener_parse(argv[1]);
+    if (!jentry) {
+      return common::make_error_inval();
+    }
+
+    EntryInfo entry_info;
+    common::Error err = entry_info.DeSerialize(jentry);
+    json_object_put(jentry);
+    if (err) {
+      return err;
+    }
+
+    daemon_client::ProtocoledDaemonClient* pdclient = static_cast<daemon_client::ProtocoledDaemonClient*>(dclient);
+    protocol::responce_t resp = daemon_client::EntrySlaveResponceSuccess(id);
+    pdclient->WriteResponce(resp);
+    return common::Error();
+  }
+
+  return common::Error();
 }
 }
 }

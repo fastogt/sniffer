@@ -19,6 +19,7 @@
 #define SLAVE_ACTIVATE_RESP_SUCCESS GENEATATE_SUCCESS(SLAVE_ACTIVATE)
 
 // entry
+#define SLAVE_SEND_ENTRY_REQ_1E GENERATE_REQUEST_FMT_ARGS(SLAVE_SEND_ENTRY, "%s")
 #define SLAVE_SEND_ENTRY_RESP_FAIL_1E GENEATATE_FAIL_FMT(SLAVE_SEND_ENTRY, "%s")
 #define SLAVE_SEND_ENTRY_RESP_SUCCESS GENEATATE_SUCCESS(SLAVE_SEND_ENTRY)
 
@@ -35,6 +36,10 @@ protocol::responce_t ActivateSlaveResponceSuccess(protocol::sequance_id_t id) {
 
 protocol::responce_t EntrySlaveResponceSuccess(protocol::sequance_id_t id) {
   return common::protocols::three_way_handshake::MakeResponce(id, SLAVE_SEND_ENTRY_RESP_SUCCESS);
+}
+
+protocol::request_t EntrySlaveRequest(protocol::sequance_id_t id, protocol::serializet_t msg) {
+  return common::protocols::three_way_handshake::MakeRequest(id, SLAVE_SEND_ENTRY_REQ_1E, msg);
 }
 
 protocol::responce_t EntriesSlaveResponceSuccess(protocol::sequance_id_t id) {

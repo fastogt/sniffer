@@ -62,6 +62,11 @@ class MasterService : public ProcessWrapper, public sniffer::ISnifferObserver {
                                                      int argc,
                                                      char* argv[]) override WARN_UNUSED_RESULT;
 
+  virtual common::Error HandleRequestEntryFromSlave(daemon_client::DaemonClient* dclient,
+                                                    protocol::sequance_id_t id,
+                                                    int argc,
+                                                    char* argv[]) WARN_UNUSED_RESULT;
+
  private:
   void TouchEntries(const common::file_system::ascii_directory_string_path& path,
                     const std::vector<EntryInfo>& entries);

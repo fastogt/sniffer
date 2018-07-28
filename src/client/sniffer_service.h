@@ -39,6 +39,7 @@ class SnifferService : public ProcessWrapper, public sniffer::ISnifferObserver {
  protected:
   virtual void PreLooped(common::libev::IoLoop* server) override;
   virtual void PostLooped(common::libev::IoLoop* server) override;
+  virtual void Closed(common::libev::IoClient* client) override;
 
   virtual void HandlePacket(sniffer::ISniffer* sniffer,
                             const u_char* packet,

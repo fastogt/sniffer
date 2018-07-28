@@ -64,7 +64,6 @@ class ProcessWrapper : public common::libev::IoLoopObserver {
                                                      int argc,
                                                      char* argv[]) WARN_UNUSED_RESULT;
 
- protected:
   protocol::sequance_id_t NextRequestID();
 
   virtual common::Error DaemonDataReceived(daemon_client::DaemonClient* dclient) WARN_UNUSED_RESULT;

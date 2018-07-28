@@ -24,7 +24,10 @@ namespace sniffer {
 namespace daemon_client {
 
 protocol::responce_t ActivateSlaveResponceSuccess(protocol::sequance_id_t id);
+
 protocol::responce_t EntrySlaveResponceSuccess(protocol::sequance_id_t id);
+protocol::request_t EntrySlaveRequest(protocol::sequance_id_t id, protocol::serializet_t msg);
+
 protocol::responce_t EntriesSlaveResponceSuccess(protocol::sequance_id_t id);
 
 }  // namespace server
